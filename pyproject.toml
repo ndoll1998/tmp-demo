@@ -5,8 +5,11 @@ description = ""
 authors = []
 readme = "README.md"
 dependencies = [
-    "fastapi==0.115.5",
-    "pydantic==2.9.2"
+    "fastapi",
+    "pydantic",
+    "llama-index",
+    "openai",
+    "ipython",
 ]
 
 [build-system]
@@ -16,5 +19,3 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["agent", "environment"]
 package-dir = { "" = "src" }
-
-
