@@ -1,4 +1,4 @@
-from functools import partial
+from functools import cache, partial
 from typing import Any, Callable
 
 import httpx
@@ -17,9 +17,11 @@ class EnvClient(object):
     def base_url(self) -> str:
         return f"{self.protocol}://{self.host}:{self.port}{self.prefix}"
 
+    @cache
     def get_action_ids(self) -> list[ActionId]:
         return httpx.get(f"{self.base_url}/action/ids").json()
 
+    @cache
     def get_action_infos(self) -> list[ActionInfo]:
         action_infos = []
         for i in self.get_action_ids():
@@ -39,3 +41,9 @@ class EnvClient(object):
 
     def action_to_callable(self, info: ActionInfo) -> Callable:
         return partial(self.take_action, info)
+
+    def get_action_info_from_name(self, name: str) -> ActionInfo:
+        for info in self.get_action_infos():
+            if info.name == name:
+                return info
+        raise ValueError(name)

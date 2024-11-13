@@ -6,14 +6,18 @@ from fastapi.routing import APIRoute, APIRouter, APIWebSocketRoute
 from llama_index.core.agent import AgentChatResponse, AgentRunner
 from llama_index.core.memory import ChatMemoryBuffer
 
-from agent.dto import ChatMessage
+from agent.callbacks import AgentCallback
+from agent.dto import ChatMessage, MessageRole
 
 logger = logging.getLogger(__name__)
 
 
 class AgentService(APIRouter):
-    def __init__(self, agent: AgentRunner, prefix: str = "") -> None:
+    def __init__(
+        self, agent: AgentRunner, prefix: str = "", callbacks: list[AgentCallback] = []
+    ) -> None:
         self.agent = agent
+        self.callbacks = callbacks
         self.step_history = Queue()
 
         routes = [
@@ -57,6 +61,9 @@ class AgentService(APIRouter):
             await self.step_history.get()
 
     async def run_task(self, message: str) -> AgentChatResponse:
+        for cb in self.callbacks:
+            cb.on_start(ChatMessage(role=MessageRole.USER, content=message))
+
         task = self.agent.create_task(message)
         i = 0
         while not (await self.agent.arun_step(task.task_id)).is_last:
@@ -65,9 +72,18 @@ class AgentService(APIRouter):
             for chat_message in messages[i:]:
                 assert isinstance(chat_message, ChatMessage)
                 await self.step_history.put(chat_message)
+
+                for cb in self.callbacks:
+                    cb.on_step(chat_message)
+
                 i += 1
 
         await self.step_history.put(None)
 
         # now that the step execution is done, we can finalize response
-        return self.agent.finalize_response(task.task_id)
+        response: AgentChatResponse = self.agent.finalize_response(task.task_id)
+
+        for cb in self.callbacks:
+            cb.on_completion(response.response)
+
+        return response

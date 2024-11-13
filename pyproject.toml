@@ -11,6 +11,7 @@ dependencies = [
     "llama-index",
     "openai",
     "ipython",
+    "nbformat",
 ]
 
 [build-system]
@@ -33,7 +34,7 @@ line_length = 100
 
 [tool.ruff]
 line-length = 100
-ignore = ["E741", "B028", "B006", "B008", "B023", "T201"]
+ignore = ["E741", "B028", "B006", "B008", "B019", "B023", "T201"]
 select = ["E", "F", "W", "N", "B", "T"]
 
 [tool.ruff.pydocstyle]
