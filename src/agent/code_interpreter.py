@@ -55,10 +55,7 @@ class CodeInterpreter:
         self.history: list[CodeCell] = []
         self.functions = functions or []
         # Create an embedded IPython instance
-        self.shell = TerminalInteractiveShell.instance()
-        for fn in self.functions:
-            # Inject fn into the shell's user namespace
-            self.shell.user_ns[fn.name] = fn.fn
+        self.shell = self.create_shell()
 
     def run_cell(self, code: str) -> str:
         """Runs python code in a ipython cell and returns the captured stdout.
@@ -88,6 +85,17 @@ class CodeInterpreter:
         self.history.append(CodeCell(input=code, output=output))
 
         return output
+
+    def create_shell(self) -> TerminalInteractiveShell:
+        shell = TerminalInteractiveShell.instance()
+        for fn in self.functions:
+            # Inject fn into the shell's user namespace
+            shell.user_ns[fn.name] = fn.fn
+        return shell
+
+    def reset(self) -> None:
+        del self.shell
+        self.shell = self.create_shell()
 
     def to_tool(self) -> FunctionTool:
         return FunctionTool.from_defaults(

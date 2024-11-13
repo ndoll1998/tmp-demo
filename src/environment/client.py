@@ -7,7 +7,7 @@ from environment.dto import ActionArgs, ActionId, ActionInfo, ActionResult
 
 
 class EnvClient(object):
-    def __init__(self, host: str, port: int, protocol: str = "http", prefix: str = "/env") -> None:
+    def __init__(self, host: str, port: int, protocol: str = "http", prefix: str = "") -> None:
         self.host = host
         self.port = port
         self.protocol = protocol
