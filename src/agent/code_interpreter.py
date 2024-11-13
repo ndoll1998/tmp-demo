@@ -1,10 +1,14 @@
-import io
-import sys
-from typing import Callable
-from dataclasses import dataclass
-from llama_index.core.tools import FunctionTool
-from IPython.terminal.interactiveshell import TerminalInteractiveShell
 import inspect
+import io
+import logging
+import sys
+from dataclasses import dataclass
+from typing import Callable
+
+from IPython.terminal.interactiveshell import TerminalInteractiveShell
+from llama_index.core.tools import FunctionTool
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -43,11 +47,10 @@ You have access to a code interpreter tool, `python`, where you can execute Pyth
 - **Write clean, readable code**: Use comments to explain what each part of the code does.
 - **Reuse Existing Variables**: When variables are created in previous steps, use them directly rather than recreating them. This reduces redundant code and ensures efficient use of the persistent environment.
 - **Store Outputs as Variables**: When calling functions that return outputs needed later, store them in variables. This allows you to reference these variables in subsequent code without recomputation.
-"""
+"""  # noqa: E501
 
 
 class CodeInterpreter:
-
     def __init__(self, functions: list[Function] | None = None) -> None:
         self.history: list[CodeCell] = []
         self.functions = functions or []
@@ -66,14 +69,14 @@ class CodeInterpreter:
         Returns:
             (str): The output of the ipython cell including all captured stdout.
         """
-        print("------ Code ------\n", code, "\n------------")
+        logger.info("------ Code ------\n" + code + "\n------------")
         # Create a StringIO buffer to capture output
         buffer = io.StringIO()
         # Redirect stdout to the buffer
-        sys.stdout = buffer
+        sys.stdout = buffer  # noqa: B018
         try:
             # Execute the code
-            self.shell.run_cell(code).result
+            self.shell.run_cell(code)
         finally:
             # Restore stdout
             sys.stdout = sys.__stdout__

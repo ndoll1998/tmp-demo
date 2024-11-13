@@ -1,34 +1,24 @@
 import inspect
-from uuid import uuid4
 from logging import getLogger
-from typing import Any, ParamSpec, TypeVar, Callable
+from typing import Callable, ParamSpec, TypeVar
+from uuid import uuid4
 
-from pydantic import BaseModel
-from fastapi import Body
-from fastapi.routing import APIRouter, APIRoute
+from fastapi.routing import APIRoute, APIRouter
 
-from .interface import ActionId, ActionInfo
-
-class Args(BaseModel):
-    args: tuple[Any] = ()
-    kwargs: dict[str, Any] = {}
-
-class Result(BaseModel):
-    result: Any
+from .dto import ActionArgs, ActionId, ActionInfo, ActionResult
 
 logger = getLogger(__name__)
 
+
 class RemoteEnv(APIRouter):
-
     def __init__(self, prefix: str = "") -> None:
-
         self._registered_action_infos: dict[ActionId, ActionInfo] = {}
         self._registered_action_fn: dict[ActionId, Callable] = {}
 
         routes = [
             APIRoute(path="/action/ids", endpoint=self.get_action_ids, methods=["GET"]),
             APIRoute(path="/action/info", endpoint=self.get_action_info, methods=["GET"]),
-            APIRoute(path="/action/take", endpoint=self.take_action, methods=["POST"])
+            APIRoute(path="/action/take", endpoint=self.take_action, methods=["POST"]),
         ]
 
         super(RemoteEnv, self).__init__(
@@ -40,14 +30,12 @@ class RemoteEnv(APIRouter):
         return list(self._registered_action_infos.keys())
 
     def get_action_info(self, action_id: ActionId):
-
         if action_id not in self._registered_action_infos:
             raise RuntimeError(f"Action id '{action_id}' invalid!")
 
         return self._registered_action_infos[action_id]
 
-    def take_action(self, action_id: ActionId, args: Args = Body(...)) -> Result:
-
+    def take_action(self, action_id: ActionId, args: ActionArgs) -> ActionResult:
         if action_id not in self._registered_action_infos:
             raise RuntimeError(f"Action id '{action_id}' invalid!")
 
@@ -56,19 +44,17 @@ class RemoteEnv(APIRouter):
 
         return {"result": result}
 
-
     P = ParamSpec("P")
     R = TypeVar("T")
 
     def register_action(self, fn: Callable[P, R]) -> Callable[P, R]:
-
         action_id = str(uuid4())
 
         info = ActionInfo(
             action_id=action_id,
             name=fn.__name__,
             description=fn.__doc__,
-            signature=str(inspect.signature(fn))
+            signature=str(inspect.signature(fn)),
         )
 
         self._registered_action_infos[action_id] = info

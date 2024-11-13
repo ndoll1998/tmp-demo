@@ -6,6 +6,7 @@ authors = []
 readme = "README.md"
 dependencies = [
     "fastapi",
+    "uvicorn",
     "pydantic",
     "llama-index",
     "openai",
@@ -19,3 +20,21 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["agent", "environment"]
 package-dir = { "" = "src" }
+
+
+[tool.black]
+target-version = ["py312"]
+line-length = 100
+docstring-style = "google"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+ignore = ["E741", "B028", "B006", "B008", "B023"]
+select = ["E", "F", "W", "N", "B", "T"]
+
+[tool.ruff.pydocstyle]
+convention = "google"
