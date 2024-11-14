@@ -33,7 +33,15 @@ logging.config.dictConfig(logging_config)
 
 env = RemoteEnv()
 
-env.register_const("Const", 5, "A Constant")
+env.register_const(
+    "conveyer_belt_bbox",
+    value=(0, 0, 20, 100),
+    description="The bounding box coordinates of the conveyer belt as (x_0, y_0, x_1, y_1).",
+)
+env.register_const(
+    "conveyer_belt_height", value=10, description="The height the conveyer belt is placed at."
+)
+
 
 @env.register_action
 def detect_objects() -> dict[str, str]:

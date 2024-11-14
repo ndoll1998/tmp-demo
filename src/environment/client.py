@@ -2,6 +2,7 @@ from functools import cache, cached_property, partial
 from typing import Any, Callable
 
 import httpx
+from pydantic import TypeAdapter
 
 from environment.dto import ActionArgs, ActionId, ActionInfo, ActionResult, Const
 
@@ -18,8 +19,10 @@ class EnvClient(object):
         return f"{self.protocol}://{self.host}:{self.port}{self.prefix}"
 
     @cached_property
-    def consts(self) -> list[Const]:
-        return httpx.get(f"{self.base_url}/consts").json()
+    def consts(self) -> dict[str, Const]:
+        response = httpx.get(f"{self.base_url}/consts")
+        consts = TypeAdapter(list[Const]).validate_json(response.content)
+        return {const.name: const for const in consts}
 
     @cache
     def get_action_ids(self) -> list[ActionId]:
@@ -51,4 +54,3 @@ class EnvClient(object):
             if info.name == name:
                 return info
         raise ValueError(name)
-

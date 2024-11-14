@@ -84,20 +84,11 @@ if __name__ == "__main__":
 
     constants = [
         Constant.from_defaults(
-            name="conveyer_belt_x",
-            docstring="The X-Coordinates of the left and right boundary of the conveyer belt.",
-            value=(0, 20),
-        ),
-        Constant.from_defaults(
-            name="conveyer_belt_y",
-            docstring="The Y-Coordinates of the upper and lower boundary of the conveyer belt.",
-            value=(0, 100),
-        ),
-        Constant.from_defaults(
-            name="conveyer_belt_z",
-            docstring="The Z-Coordinate that indicates the height of the conveyer belt.",
-            value=10,
-        ),
+            name=const.name,
+            docstring=const.description,
+            value=const.value,
+        )
+        for const in client.consts.values()
     ]
 
     interpreter = CodeInterpreter(constants=constants, functions=functions)

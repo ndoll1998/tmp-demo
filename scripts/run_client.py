@@ -22,13 +22,20 @@ class NotebookCallbackWithEnv(NotebookCallback):
             file_path, interpreter_tool_name, interpreter_argument_name, msg_format_str
         )
 
-        code_lines = [
-            "from environment.client import EnvClient",
-            f"client = EnvClient(host='{env_client.host}', port={env_client.port}, prefix='{env_client.prefix}')",  # noqa: E501
-        ] + [
-            f"{info.name} = client.action_to_callable(client.get_action_info_from_name('{info.name}'))"  # noqa: E501
-            for info in env_client.get_action_infos()
-        ]
+        code_lines = (
+            [
+                "from environment.client import EnvClient",
+                f"client = EnvClient(host='{env_client.host}', port={env_client.port}, prefix='{env_client.prefix}')",  # noqa: E501
+            ]
+            + [
+                f"{info.name} = client.action_to_callable(client.get_action_info_from_name('{info.name}'))"  # noqa: E501
+                for info in env_client.get_action_infos()
+            ]
+            + [
+                f"{name} = client.consts['{const.name}'].value"
+                for name, const in env_client.consts.items()
+            ]
+        )
 
         code = "\n".join(code_lines)
         self.add_cells(nbf.v4.new_code_cell(code))
@@ -103,7 +110,7 @@ if __name__ == "__main__":
 
     callbacks = [
         LoggingCallback(),
-        NotebookCallbackWithEnv(env_client, "notebook.ipynb"),
+        NotebookCallbackWithEnv(env_client, "output/notebook.ipynb"),
     ]
 
     while (user_input := input("USER: ")) != "":
