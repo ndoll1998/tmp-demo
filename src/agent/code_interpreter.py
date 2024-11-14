@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import inspect
 import io
 import logging
 import sys
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from llama_index.core.tools import FunctionTool
@@ -12,11 +14,34 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class Constant:
+    name: str
+    docstring: str
+    value: Any
+    dtype: str
+
+    @classmethod
+    def from_defaults(
+        cls,
+        value: Any,
+        name: str | None = None,
+        docstring: str | None = None,
+        dtype: str | None = None,
+    ) -> Function:
+        return Constant(
+            name=name or value.__name__,
+            docstring=docstring or value.__doc__,
+            dtype=dtype or type(value).__name__,
+            value=value,
+        )
+
+
+@dataclass
 class Function:
     name: str
     signature: str
     docstring: str
-    fn: callable
+    fn: Callable
 
     @classmethod
     def from_defaults(
@@ -25,7 +50,7 @@ class Function:
         name: str | None = None,
         docstring: str | None = None,
         signature: str | None = None,
-    ) -> "Function":
+    ) -> Function:
         return Function(
             name=name or fn.__name__,
             signature=signature or str(inspect.signature(fn)),
@@ -40,20 +65,16 @@ class CodeCell:
     output: str
 
 
-CODE_INTERPRETER_PROMPT = """## Python Interpreter
-You have access to a code interpreter tool, `python`, where you can execute Python code in a Jupyter-like environment. This environment has persistent memory, meaning all variables, functions, and objects that you define will remain available for subsequent calls to the `python` interpreter. **Use previously defined variables and results directly when they are relevant to a task.**
-
-### Code Writing Guidelines
-- **Write clean, readable code**: Use comments to explain what each part of the code does.
-- **Reuse Existing Variables**: When variables are created in previous steps, use them directly rather than recreating them. This reduces redundant code and ensures efficient use of the persistent environment.
-- **Store Outputs as Variables**: When calling functions that return outputs needed later, store them in variables. This allows you to reference these variables in subsequent code without recomputation.
+CODE_INTERPRETER_PROMPT = """The `python` interpreter tool.
+With this tool you can execute Python code in a Jupyter-like environment. This environment has persistent memory, meaning all variables, functions, and objects that you define will remain available for subsequent calls to the `python` interpreter.
 """  # noqa: E501
 
 
 class CodeInterpreter:
-    def __init__(self, functions: list[Function] | None = None) -> None:
+    def __init__(self, constants: list[Constant], functions: list[Function] | None = None) -> None:
         self.history: list[CodeCell] = []
         self.functions = functions or []
+        self.constants = constants or []
         # Create an embedded IPython instance
         self.shell = self.create_shell()
 
@@ -88,9 +109,10 @@ class CodeInterpreter:
 
     def create_shell(self) -> TerminalInteractiveShell:
         shell = TerminalInteractiveShell.instance()
-        for fn in self.functions:
-            # Inject fn into the shell's user namespace
-            shell.user_ns[fn.name] = fn.fn
+        for func in self.functions:
+            shell.user_ns[func.name] = func.fn
+        for const in self.constants:
+            shell.user_ns[const.name] = const.value
         return shell
 
     def reset(self) -> None:
@@ -118,4 +140,9 @@ class CodeInterpreter:
                 f'def {fn.name}{fn.signature}\n    """{fn.docstring.strip()}\n    """\n'
                 for fn in self.functions
             ]
+        )
+
+    def get_constant_descriptions(self) -> str:
+        return "\n\n".join(
+            [f'{const.name}: {const.dtype}\n"""{const.docstring}"""' for const in self.constants]
         )

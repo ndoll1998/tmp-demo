@@ -7,6 +7,33 @@ class PatchedAgentService(AgentService):
         interpreter.reset()
 
 
+SYSTEM_PROMPT = """You are a helpful agent that deals with user requests.
+
+## Python Interpreter
+You have access to a code interpreter tool, `python`, where you can execute Python code in a Jupyter-like environment. This environment has persistent memory, meaning all variables, functions, and objects that you define will remain available for subsequent calls to the `python` interpreter.
+
+### Pre-Defined Functions
+The interpreter environment is initialized with a set of pre-defined functions that you can use out of the box. If a pre-defined function can help solve the task, call it directly without redefining it.
+```python
+{function_descriptions}
+```
+
+### Pre-Defined variables
+The interpreter environment is also initialized with a set of pre-defined variables that can be used out of the box. If a pre-defined variable can help solve the task, use it directly without redefining it.
+```
+{constant_descriptions}
+```
+
+CAUTION: The pre-defined functions and variables are only available inside the interpreter and must not be called via the function calling API.
+
+### Code Writing Guidelines
+- **Write clean, readable code**: Use comments to explain what each part of the code does.
+- **Reuse Existing Variables**: When variables are created in previous steps, use them directly rather than recreating them. This reduces redundant code and ensures efficient use of the persistent environment.
+- **Store Outputs as Variables**: When calling functions that return outputs needed later, store them in variables. This allows you to reference these variables in subsequent code without recomputation.
+- **Avoid Hard-Coding**: Do not hard-code specific values; instead, use variables and write code that is generic and reusable. This ensures flexibility and adaptability in different contexts.
+"""  # noqa: E501
+
+
 if __name__ == "__main__":
     import logging
     import sys
@@ -16,7 +43,7 @@ if __name__ == "__main__":
     from llama_index.agent.openai import OpenAIAgent
     from llama_index.llms.openai import OpenAI
 
-    from agent.code_interpreter import CodeInterpreter, Function
+    from agent.code_interpreter import CodeInterpreter, Constant, Function
     from environment.client import EnvClient
 
     # Define basic configuration
@@ -55,25 +82,35 @@ if __name__ == "__main__":
         for info in client.get_action_infos()
     ]
 
-    interpreter = CodeInterpreter(functions)
+    constants = [
+        Constant.from_defaults(
+            name="conveyer_belt_x",
+            docstring="The X-Coordinates of the left and right boundary of the conveyer belt.",
+            value=(0, 20),
+        ),
+        Constant.from_defaults(
+            name="conveyer_belt_y",
+            docstring="The Y-Coordinates of the upper and lower boundary of the conveyer belt.",
+            value=(0, 100),
+        ),
+        Constant.from_defaults(
+            name="conveyer_belt_z",
+            docstring="The Z-Coordinate that indicates the height of the conveyer belt.",
+            value=10,
+        ),
+    ]
 
-    SYSTEM_PROMPT = """You are a helpful agent that deals with user requests.
-
-    ## Pre-Defined Functions
-    The interpreter environment is initialized with a set of pre-defined functions that you can use out of the box. If a pre-defined function can help solve the task, call it directly without redefining it.
-    ```python
-    {function_descriptions}
-    ```
-    """  # noqa: E501
+    interpreter = CodeInterpreter(constants=constants, functions=functions)
 
     # Create the Agent with load/search tools
     agent = OpenAIAgent.from_tools(
         llm=OpenAI(model="gpt-4o"),
         tools=[interpreter.to_tool()],
         system_prompt=SYSTEM_PROMPT.format(
-            function_descriptions=interpreter.get_function_descriptions()
+            function_descriptions=interpreter.get_function_descriptions(),
+            constant_descriptions=interpreter.get_constant_descriptions(),
         ),
-        # verbose=True,
+        verbose=True,
     )
 
     app = FastAPI()

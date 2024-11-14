@@ -43,38 +43,68 @@ def detect_objects() -> dict[str, str]:
         {
             <object_id (str)>: {
                 "description": <object_description (str)>,
-                "x": <position_x (float)>,
-                "y": <position_y (float)>,
+                "x": <(left_x, right_x) (tuple[float, float])>,
+                "y": <(upper_y, lower_y) tuple[float, float]>,
+                "z": <height (float)>
             }
         }
     """
     return {
         "0": {
             "description": "A green apple.",
-            "x": 0,
-            "y": 0,
+            "x": (20, 22),
+            "y": (78, 80),
+            "z": 10,
         },
         "1": {
             "description": "A lemon.",
-            "x": 10,
-            "y": 10,
+            "x": (10, 13),
+            "y": (40, 42),
+            "z": 10,
         },
         "2": {
             "description": "An orange.",
-            "x": 0,
-            "y": 0,
+            "x": (56, 58),
+            "y": (33, 36),
+            "z": 10,
         },
     }
 
 
 @env.register_action
-def move_object(obj_id: str, x: float, y: float) -> bool:
-    """Moves the object with `obj_id` to position (x, y).
+def grab_object(x: float, y: float, z: float) -> bool:
+    """Grabs an object at position (x, y, z). Make sure to
+    always grab at the middlepoint of an object.
 
     Args:
-        obj_id (str): The object_id of the object to move.
+        x (float): The x coordinate to grab at.
+        y (float): The y coordinate to grab at.
+        z (float): The z coordinate to grab at.
+
+    Returns:
+        (bool): True if successfull, False otherwise
+    """
+    return True
+
+
+@env.register_action
+def release_object() -> bool:
+    """Release the current object.
+
+    Returns:
+        (bool): True if successfull, False otherwise
+    """
+    return True
+
+
+@env.register_action
+def move(obj_id: str, x: float, y: float, z: float) -> bool:
+    """Move to location (x, y, z).
+
+    Args:
         x (float): The x coordinate to move to.
         y (float): The y coordinate to move to.
+        z (float): The z coordinate to move to.
 
     Returns:
         (bool): True if successfull, False otherwise
