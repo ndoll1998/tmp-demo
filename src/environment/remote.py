@@ -3,6 +3,7 @@ from logging import getLogger
 from typing import Any, Callable, ParamSpec, TypeVar
 from uuid import uuid4
 
+from fastapi import Response
 from fastapi.routing import APIRoute, APIRouter
 
 from .dto import ActionArgs, ActionId, ActionInfo, ActionResult, Const
@@ -19,6 +20,8 @@ class RemoteEnv(APIRouter):
         self._registered_action_fn: dict[ActionId, Callable] = {}
 
         routes = [
+            # health
+            APIRoute(path="/health", endpoint=self.health, methods=["GET"]),
             # environment description
             APIRoute(path="/description", endpoint=self.get_description, methods=["GET"]),
             # consts
@@ -33,6 +36,9 @@ class RemoteEnv(APIRouter):
             prefix=prefix,
             routes=routes,
         )
+
+    def health(self) -> None:
+        return Response()
 
     def get_description(self) -> str:
         return self.description

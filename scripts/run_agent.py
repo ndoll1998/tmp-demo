@@ -1,4 +1,35 @@
+import logging
+import sys
+
+from llama_index.agent.openai import OpenAIAgent
+from llama_index.llms.openai import OpenAI
+
+from agent.code_interpreter import CodeInterpreter, Constant, Function
 from agent.service import AgentService
+from environment.client import EnvClient
+
+# Define basic configuration
+logging_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "stream": sys.stdout,
+            "formatter": "standard",
+            "level": "INFO",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+}
+# Apply the configuration
+logging.config.dictConfig(logging_config)
 
 
 class PatchedAgentService(AgentService):
@@ -7,9 +38,7 @@ class PatchedAgentService(AgentService):
         interpreter.reset()
 
 
-SYSTEM_PROMPT = """You are an agent that controls a robot arm.
-
-{environment_description}
+SYSTEM_PROMPT = """You are an agent that controls a robot arm.{environment_description}
 
 ## Python Interpreter
 You have access to a code interpreter tool, `python`, where you can execute Python code in a Jupyter-like environment. This environment has persistent memory, meaning all variables, functions, and objects that you define will remain available for subsequent calls to the `python` interpreter.
@@ -35,77 +64,78 @@ CAUTION: The pre-defined functions and variables are only available inside the i
 - **Avoid Hard-Coding**: Do not hard-code specific values; instead, use variables and write code that is generic and reusable. This ensures flexibility and adaptability in different contexts.
 """  # noqa: E501
 
+constants = []
+functions = []
+
+# get functions and constants from the robot environment
+robot_env_client = EnvClient(host="localhost", port=8000, prefix="/env")
+if robot_env_client.healthy:
+    for info in robot_env_client.get_action_infos():
+        functions.append(
+            Function(
+                fn=robot_env_client.action_to_callable(info),
+                name=info.name,
+                docstring=info.description,
+                signature=info.signature,
+            )
+        )
+
+    for const in robot_env_client.consts.values():
+        constants.append(
+            Constant.from_defaults(
+                name=const.name,
+                docstring=const.description,
+                value=const.value,
+            )
+        )
+
+# get functions and constants from the std environment
+std_env_client = EnvClient(host="localhost", port=8002, prefix="/env")
+if std_env_client.healthy:
+    print("HEALTHY")
+    for info in std_env_client.get_action_infos():
+        functions.append(
+            Function(
+                fn=std_env_client.action_to_callable(info),
+                name=info.name,
+                docstring=info.description,
+                signature=info.signature,
+            )
+        )
+
+    for const in std_env_client.consts.values():
+        constants.append(
+            Constant.from_defaults(
+                name=const.name,
+                docstring=const.description,
+                value=const.value,
+            )
+        )
+
+# create the code interpreter tool
+interpreter = CodeInterpreter(constants=constants, functions=functions)
+
+# format the system prompt
+SYSTEM_PROMPT = SYSTEM_PROMPT.format(
+    environment_description=f"\n\n{robot_env_client.env_description}"
+    if robot_env_client.env_description != ""
+    else "",
+    function_descriptions=interpreter.get_function_descriptions(),
+    constant_descriptions=interpreter.get_constant_descriptions(),
+)
+
+# Create the Agent with load/search tools
+agent = OpenAIAgent.from_tools(
+    llm=OpenAI(model="gpt-4o"),
+    tools=[interpreter.to_tool()],
+    system_prompt=SYSTEM_PROMPT,
+    # verbose=True,
+)
+
 
 if __name__ == "__main__":
-    import logging
-    import sys
-
     import uvicorn
     from fastapi import FastAPI
-    from llama_index.agent.openai import OpenAIAgent
-    from llama_index.llms.openai import OpenAI
-
-    from agent.code_interpreter import CodeInterpreter, Constant, Function
-    from environment.client import EnvClient
-
-    # Define basic configuration
-    logging_config = {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
-        },
-        "handlers": {
-            "console": {
-                "class": "logging.StreamHandler",
-                "stream": sys.stdout,
-                "formatter": "standard",
-                "level": "INFO",
-            },
-        },
-        "root": {
-            "handlers": ["console"],
-            "level": "INFO",
-        },
-    }
-
-    # Apply the configuration
-    logging.config.dictConfig(logging_config)
-
-    client = EnvClient(host="localhost", port=8000, prefix="/env")
-
-    functions = [
-        Function(
-            fn=client.action_to_callable(info),
-            name=info.name,
-            docstring=info.description,
-            signature=info.signature,
-        )
-        for info in client.get_action_infos()
-    ]
-
-    constants = [
-        Constant.from_defaults(
-            name=const.name,
-            docstring=const.description,
-            value=const.value,
-        )
-        for const in client.consts.values()
-    ]
-
-    interpreter = CodeInterpreter(constants=constants, functions=functions)
-
-    # Create the Agent with load/search tools
-    agent = OpenAIAgent.from_tools(
-        llm=OpenAI(model="gpt-4o"),
-        tools=[interpreter.to_tool()],
-        system_prompt=SYSTEM_PROMPT.format(
-            environment_description=client.env_description,
-            function_descriptions=interpreter.get_function_descriptions(),
-            constant_descriptions=interpreter.get_constant_descriptions(),
-        ),
-        verbose=True,
-    )
 
     app = FastAPI()
     app.include_router(AgentService(agent))

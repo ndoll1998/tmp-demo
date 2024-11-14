@@ -18,6 +18,16 @@ class EnvClient(object):
     def base_url(self) -> str:
         return f"{self.protocol}://{self.host}:{self.port}{self.prefix}"
 
+    @property
+    def healthy(self) -> bool:
+        try:
+            response = httpx.get(f"{self.base_url}/health")
+
+        except httpx.HTTPError:
+            return False
+
+        return response.status_code == 200
+
     @cached_property
     def env_description(self) -> str:
         return httpx.get(f"{self.base_url}/description").text
