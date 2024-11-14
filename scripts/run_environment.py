@@ -33,6 +33,7 @@ logging.config.dictConfig(logging_config)
 
 env = RemoteEnv()
 
+env.register_const("Const", 5, "A Constant")
 
 @env.register_action
 def detect_objects() -> dict[str, str]:

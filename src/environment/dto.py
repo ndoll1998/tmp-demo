@@ -21,3 +21,10 @@ class ActionArgs(BaseModel):
 
 class ActionResult(BaseModel):
     result: Any
+
+
+class Const(BaseModel):
+    name: str
+    value: Any
+    description: str
+
