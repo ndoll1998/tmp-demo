@@ -42,6 +42,7 @@ class EnvClient(object):
             url=f"{self.base_url}/action/take",
             params={"action_id": info.action_id},
             content=action_args.model_dump_json(),
+            timeout=None
         )
         action_result = ActionResult.model_validate_json(response.content)
         return action_result.result
