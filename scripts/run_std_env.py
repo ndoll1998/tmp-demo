@@ -37,11 +37,11 @@ env = RemoteEnv()
 env.register_action(vlm.prompt)
 
 image = Image.open("data/example_image.jpeg")
-env.register_const(
-    name="scene_image",
-    description="An image of the scene.",
-    value=image,
-)
+# env.register_const(
+#     name="scene_image",
+#     description="An image of the scene.",
+#     value=image,
+# )
 
 
 if __name__ == "__main__":

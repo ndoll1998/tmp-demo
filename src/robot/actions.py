@@ -24,6 +24,9 @@ class RobotActions(object):
         self.controller.wait_for_kinematics_ready()
         self.controller.set_override(90.0)
 
+    def get_position(self):
+        return self.controller.robot_state.position_robot
+
     @property
     def actions(self) -> list[Callable]:
         return [
@@ -48,7 +51,7 @@ class RobotActions(object):
             bool: True if the robot successfully reached the specified position,
             False otherwise.
         """
-        pos = (x, y, 300, 179, 0, 179, 0, 0, 0)
+        pos = (x, y, 65, 180, 0, 180, 0, 0, 0)
         return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
 
     def clearing_position(self) -> bool:
@@ -68,7 +71,10 @@ class RobotActions(object):
         if not self.controller.set_dout(31, False):
             return False
 
-        pos = (-7.1, -18.02, 122.5, 0.0, 75.5, -7.0, 0.0, 0.0, 0.0)
+        pos = (200, 0, 350, 180, 0, 180, 0, 0, 0)
+        return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
+
+        pos = (0.0, -18.02, 122.5, 0.0, 75.5, -7.0, 0.0, 0.0, 0.0)
         return self.controller.move_joints(*pos, velocity=self.velocity, wait_move_finished=True)
 
     def grab_object(self) -> bool:

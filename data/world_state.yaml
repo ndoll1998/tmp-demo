@@ -1,0 +1,22 @@
+robot_coordinates:
+  A:
+    x: 350
+    y: -70
+  B:
+    x: 350
+    y: 85
+  C:
+    x: 245
+    y: 85
+  
+
+pixel_coordinates:
+  A:
+    x: 1271
+    y: 290
+  B:
+    x: 690
+    y: 290
+  C:
+    x: 690
+    y: 650

@@ -8,6 +8,7 @@ from fastapi import FastAPI
 
 from environment.remote import RemoteEnv
 from robot.actions import RobotActions
+from robot.vision import VisionActions
 
 # Define basic configuration
 logging_config = {
@@ -50,6 +51,10 @@ env.register_const(
 robot = RobotActions()
 for action in robot.actions:
     env.register_action(action)
+
+# register all vision actions
+vision = VisionActions()
+env.register_action(vision.capture_image)
 
 
 @env.register_action
