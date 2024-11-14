@@ -1,9 +1,9 @@
-from functools import cache, partial
+from functools import cache, cached_property, partial
 from typing import Any, Callable
 
 import httpx
 
-from environment.dto import ActionArgs, ActionId, ActionInfo, ActionResult
+from environment.dto import ActionArgs, ActionId, ActionInfo, ActionResult, Const
 
 
 class EnvClient(object):
@@ -16,6 +16,10 @@ class EnvClient(object):
     @property
     def base_url(self) -> str:
         return f"{self.protocol}://{self.host}:{self.port}{self.prefix}"
+
+    @cached_property
+    def consts(self) -> list[Const]:
+        return httpx.get(f"{self.base_url}/consts").json()
 
     @cache
     def get_action_ids(self) -> list[ActionId]:
@@ -47,3 +51,4 @@ class EnvClient(object):
             if info.name == name:
                 return info
         raise ValueError(name)
+

@@ -1,21 +1,25 @@
 import inspect
 from logging import getLogger
-from typing import Callable, ParamSpec, TypeVar
+from typing import Callable, ParamSpec, TypeVar, Any
 from uuid import uuid4
 
 from fastapi.routing import APIRoute, APIRouter
 
-from .dto import ActionArgs, ActionId, ActionInfo, ActionResult
+from .dto import ActionArgs, ActionId, ActionInfo, ActionResult, Const
 
 logger = getLogger(__name__)
 
 
 class RemoteEnv(APIRouter):
     def __init__(self, prefix: str = "") -> None:
+        self._registered_consts: list[Const] = []
         self._registered_action_infos: dict[ActionId, ActionInfo] = {}
         self._registered_action_fn: dict[ActionId, Callable] = {}
 
         routes = [
+            # consts
+            APIRoute(path="/consts", endpoint=self.get_consts, methods=["GET"]),
+            # actions
             APIRoute(path="/action/ids", endpoint=self.get_action_ids, methods=["GET"]),
             APIRoute(path="/action/info", endpoint=self.get_action_info, methods=["GET"]),
             APIRoute(path="/action/take", endpoint=self.take_action, methods=["POST"]),
@@ -25,6 +29,9 @@ class RemoteEnv(APIRouter):
             prefix=prefix,
             routes=routes,
         )
+
+    def get_consts(self) -> list[Const]:
+        return self._registered_consts
 
     def get_action_ids(self) -> list[ActionId]:
         return list(self._registered_action_infos.keys())
@@ -63,3 +70,16 @@ class RemoteEnv(APIRouter):
         logger.info(f"Registered Action '{fn.__name__}' with action id '{action_id}'")
 
         return fn
+
+    def register_const(self, name: str, value: Any, description: str) -> None:
+
+        const = Const(
+            name=name,
+            value=value,
+            description=description,
+        )
+
+        self._registered_consts.append(const)
+        
+        logger.info(f"Registered Constant '{name}={value}'")
+
