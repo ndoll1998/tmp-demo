@@ -3,6 +3,7 @@ output/
 
 *.egg-info/
 **/proto*.py
+**/.DS_Store
 
 
 # Byte-compiled / optimized / DLL files

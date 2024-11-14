@@ -68,19 +68,19 @@ constants = []
 functions = []
 
 # get functions and constants from the robot environment
-robot_env_client = EnvClient(host="localhost", port=8000, prefix="/env")
-if robot_env_client.healthy:
-    for info in robot_env_client.get_action_infos():
+env_client = EnvClient(host="localhost", port=8001, prefix="/env")
+if env_client.healthy:
+    for info in env_client.get_action_infos():
         functions.append(
             Function(
-                fn=robot_env_client.action_to_callable(info),
+                fn=env_client.action_to_callable(info),
                 name=info.name,
                 docstring=info.description,
                 signature=info.signature,
             )
         )
 
-    for const in robot_env_client.consts.values():
+    for const in env_client.consts.values():
         constants.append(
             Constant.from_defaults(
                 name=const.name,
@@ -92,7 +92,6 @@ if robot_env_client.healthy:
 # get functions and constants from the std environment
 std_env_client = EnvClient(host="localhost", port=8002, prefix="/env")
 if std_env_client.healthy:
-    print("HEALTHY")
     for info in std_env_client.get_action_infos():
         functions.append(
             Function(
@@ -117,9 +116,9 @@ interpreter = CodeInterpreter(constants=constants, functions=functions)
 
 # format the system prompt
 SYSTEM_PROMPT = SYSTEM_PROMPT.format(
-    environment_description=f"\n\n{robot_env_client.env_description}"
-    if robot_env_client.env_description != ""
-    else "",
+    environment_description=(
+        f"\n\n{env_client.env_description}" if env_client.env_description != "" else ""
+    ),
     function_descriptions=interpreter.get_function_descriptions(),
     constant_descriptions=interpreter.get_constant_descriptions(),
 )
@@ -140,4 +139,4 @@ if __name__ == "__main__":
     app = FastAPI()
     app.include_router(AgentService(agent))
 
-    uvicorn.run(app, host="127.0.0.1", port=8001, reload=False, workers=1)
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False, workers=1)

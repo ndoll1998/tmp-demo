@@ -13,8 +13,11 @@ dependencies = [
     "ipython",
     "nbformat",
     "websockets",
-    "cri_lib@git+https://github.com/CommonplaceRobotics/CRI-Python-Lib.git"
+    "cri_lib@git+https://github.com/CommonplaceRobotics/CRI-Python-Lib.git",
 ]
+
+[project.optional-dependencies]
+linting = ["pre-commit"]
 
 [build-system]
 requires = ["setuptools>=42", "wheel"]

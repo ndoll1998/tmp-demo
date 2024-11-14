@@ -13,6 +13,7 @@ class NotebookCallbackWithEnv(NotebookCallback):
     def __init__(
         self,
         env_client: EnvClient,
+        std_env_client: EnvClient,
         file_path: str,
         interpreter_tool_name: str = "python",
         interpreter_argument_name: str = "code",
@@ -22,6 +23,12 @@ class NotebookCallbackWithEnv(NotebookCallback):
             file_path, interpreter_tool_name, interpreter_argument_name, msg_format_str
         )
 
+        self.add_cells(
+            self.code_cell_from_env(env_client),
+            self.code_cell_from_env(std_env_client),
+        )
+
+    def code_cell_from_env(self, env_client: EnvClient) -> nbf.NotebookNode:
         code_lines = (
             [
                 "from environment.client import EnvClient",
@@ -38,13 +45,13 @@ class NotebookCallbackWithEnv(NotebookCallback):
         )
 
         code = "\n".join(code_lines)
-        self.add_cells(nbf.v4.new_code_cell(code))
+        return nbf.v4.new_code_cell(code)
 
 
 async def connect_and_receive_messages(
     message: str,
     host: str = "localhost",
-    port: int = 8001,
+    port: int = 8000,
     callbacks: list[AgentCallback] = [],
 ) -> str:
     client = httpx.AsyncClient(base_url=f"http://{host}:{port}", timeout=None)
@@ -104,13 +111,18 @@ if __name__ == "__main__":
     logging.config.dictConfig(logging_config)
 
     # reset agent
-    httpx.get("http://localhost:8001/reset")
+    httpx.get("http://localhost:8000/reset")
 
-    env_client = EnvClient(host="localhost", port=8000, prefix="/env")
+    env_client = EnvClient(host="localhost", port=8001, prefix="/env")
+    std_env_client = EnvClient(host="localhost", port=8002, prefix="/env")
 
     callbacks = [
         LoggingCallback(),
-        NotebookCallbackWithEnv(env_client, "output/notebook.ipynb"),
+        NotebookCallbackWithEnv(
+            env_client=env_client,
+            std_env_client=std_env_client,
+            file_path="output/notebook.ipynb",
+        ),
     ]
 
     while (user_input := input("USER: ")) != "":
