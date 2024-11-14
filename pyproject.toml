@@ -12,6 +12,7 @@ dependencies = [
     "openai",
     "ipython",
     "nbformat",
+    "websockets",
     "cri_lib@git+https://github.com/CommonplaceRobotics/CRI-Python-Lib.git"
 ]
 

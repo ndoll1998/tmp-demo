@@ -27,4 +27,3 @@ class Const(BaseModel):
     name: str
     value: Any
     description: str
-
