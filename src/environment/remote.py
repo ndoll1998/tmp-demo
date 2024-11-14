@@ -11,12 +11,16 @@ logger = getLogger(__name__)
 
 
 class RemoteEnv(APIRouter):
-    def __init__(self, prefix: str = "") -> None:
+    def __init__(self, description: str = "", prefix: str = "") -> None:
+        self.description = description
+
         self._registered_consts: list[Const] = []
         self._registered_action_infos: dict[ActionId, ActionInfo] = {}
         self._registered_action_fn: dict[ActionId, Callable] = {}
 
         routes = [
+            # environment description
+            APIRoute(path="/description", endpoint=self.get_description, methods=["GET"]),
             # consts
             APIRoute(path="/consts", endpoint=self.get_consts, methods=["GET"]),
             # actions
@@ -29,6 +33,9 @@ class RemoteEnv(APIRouter):
             prefix=prefix,
             routes=routes,
         )
+
+    def get_description(self) -> str:
+        return self.description
 
     def get_consts(self) -> list[Const]:
         return self._registered_consts

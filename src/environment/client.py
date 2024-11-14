@@ -19,6 +19,10 @@ class EnvClient(object):
         return f"{self.protocol}://{self.host}:{self.port}{self.prefix}"
 
     @cached_property
+    def env_description(self) -> str:
+        return httpx.get(f"{self.base_url}/description").text
+
+    @cached_property
     def consts(self) -> dict[str, Const]:
         response = httpx.get(f"{self.base_url}/consts")
         consts = TypeAdapter(list[Const]).validate_json(response.content)

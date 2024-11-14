@@ -7,7 +7,9 @@ class PatchedAgentService(AgentService):
         interpreter.reset()
 
 
-SYSTEM_PROMPT = """You are a helpful agent that deals with user requests.
+SYSTEM_PROMPT = """You are an agent that controls a robot arm.
+
+{environment_description}
 
 ## Python Interpreter
 You have access to a code interpreter tool, `python`, where you can execute Python code in a Jupyter-like environment. This environment has persistent memory, meaning all variables, functions, and objects that you define will remain available for subsequent calls to the `python` interpreter.
@@ -98,6 +100,7 @@ if __name__ == "__main__":
         llm=OpenAI(model="gpt-4o"),
         tools=[interpreter.to_tool()],
         system_prompt=SYSTEM_PROMPT.format(
+            environment_description=client.env_description,
             function_descriptions=interpreter.get_function_descriptions(),
             constant_descriptions=interpreter.get_constant_descriptions(),
         ),
