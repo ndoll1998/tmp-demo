@@ -33,7 +33,9 @@ logging_config = {
 # Apply the configuration
 logging.config.dictConfig(logging_config)
 
-env = RemoteEnv()
+ENV_DESCRIPTION = """The environment is a workspace where a robot arm can move, interact with objects, and perform basic manipulation tasks. The robot arm can precisely navigate to different coordinates within this workspace, allowing it to approach and engage with various objects positioned throughout the area. It can grab a single object, holding it securely until instructed to release it. The robot can only handle one object at a time and does not have the ability to pick up multiple objects simultaneously. Tasks may involve positioning, moving, or sorting objects based on their location or type."""  # noqa: E501
+
+env = RemoteEnv(description=ENV_DESCRIPTION)
 
 env.register_const(
     "conveyer_belt_bbox",
