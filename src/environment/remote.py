@@ -1,6 +1,6 @@
 import inspect
 from logging import getLogger
-from typing import Callable, ParamSpec, TypeVar, Any
+from typing import Any, Callable, ParamSpec, TypeVar
 from uuid import uuid4
 
 from fastapi.routing import APIRoute, APIRouter
@@ -72,7 +72,6 @@ class RemoteEnv(APIRouter):
         return fn
 
     def register_const(self, name: str, value: Any, description: str) -> None:
-
         const = Const(
             name=name,
             value=value,
@@ -80,6 +79,5 @@ class RemoteEnv(APIRouter):
         )
 
         self._registered_consts.append(const)
-        
-        logger.info(f"Registered Constant '{name}={value}'")
 
+        logger.info(f"Registered Constant '{name}={value}'")

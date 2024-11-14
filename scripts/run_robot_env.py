@@ -49,37 +49,26 @@ robot = RobotActions()
 for action in robot.actions:
     env.register_action(action)
 
+
 @env.register_action
 def detect_objects() -> list[dict[str, Any]]:
-    """Detects objects in the curent image and returns a list of detected objects with their details.
+    """Detects objects in the curent image and returns a list of detected objects.
 
     Each detected object is represented as a dictionary containing:
     - "object_id" (int): A unique identifier for the object.
-    - "bbox" (tuple[int, int, int, int]): The bounding box coordinates for the object as 
+    - "bbox" (tuple[int, int, int, int]): The bounding box coordinates for the object as
       (x_min, y_min, x_max, y_max), defining the object's location in the image.
     - "description" (str): A label or description for the object.
 
     Returns:
-        list[dict[str, Any]]: A list of dictionaries, each representing a detected object 
+        list[dict[str, Any]]: A list of dictionaries, each representing a detected object
         with "id", "bbox", and "description" fields.
     """
 
     return [
-        {
-            "id": 0,
-            "bbox": (300, 150, 350, 200),
-            "description": "Spray"
-        },
-        {
-            "id": 1,
-            "bbox": (300, -150, 350, -200),
-            "description": "Mug"
-        },
-        {
-            "id": 2,
-            "bbox": (200, -25, 250, 25),
-            "description": "Pen"
-        }
+        {"id": 0, "bbox": (300, 150, 350, 200), "description": "Spray"},
+        {"id": 1, "bbox": (300, -150, 350, -200), "description": "Mug"},
+        {"id": 2, "bbox": (200, -25, 250, 25), "description": "Pen"},
     ]
 
 
