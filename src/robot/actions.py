@@ -61,6 +61,13 @@ class RobotActions(object):
             bool: True if the robot successfully moved to the clearing position,
             False otherwise.
         """
+
+        if not self.controller.set_dout(30, False):
+            return False
+
+        if not self.controller.set_dout(31, False):
+            return False
+
         pos = (-7.1, -18.02, 122.5, 0.0, 75.5, -7.0, 0.0, 0.0, 0.0)
         return self.controller.move_joints(*pos, velocity=self.velocity, wait_move_finished=True)
 
