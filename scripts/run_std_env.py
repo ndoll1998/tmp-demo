@@ -14,6 +14,7 @@ env.register_action(vlm.prompt_vision_model)
 image_actions = ImageActions()
 env.register_action(image_actions.detect_objects)
 env.register_action(image_actions.crop_image)
+env.register_action(image_actions.draw_bounding_boxes)
 
 
 if __name__ == "__main__":

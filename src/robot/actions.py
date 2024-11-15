@@ -12,6 +12,7 @@ from PIL import Image
 class RobotActions(object):
     def __init__(self, ip: str = "192.168.3.11", device_id: int = 0) -> None:
         self.velocity = 100
+        self.move_height = 150
         # connect to camera
         self.device_id = device_id
         self.cap = cv2.VideoCapture(self.device_id)
@@ -24,6 +25,9 @@ class RobotActions(object):
         # setup
         self.setup_robot()
         register(self.shutdown)
+
+        self.main_workspace = (190, -250, 400, 250)
+        self.serving_workspace = (-200, 250, 100, 400)
 
         self.reset()
 
@@ -57,6 +61,23 @@ class RobotActions(object):
         self.clearing_position()
 
     def move_cartesian(self, x: float, y: float, z: float) -> bool:
+        def is_in_box(x, y, box):
+            x1, y1, x2, y2 = box
+            return (x1 <= x <= x2) and (y1 <= y <= y2)
+
+        current_pos = self.get_position()[:2]
+
+        if not (is_in_box(x, y, self.main_workspace) or is_in_box(x, y, self.serving_workspace)):
+            return False
+
+        current_space = 0 if is_in_box(*current_pos, self.main_workspace) else 1
+        target_space = 0 if is_in_box(x, y, self.main_workspace) else 1
+
+        if current_space != target_space:
+            # move to transition point
+            pos = (200, 350, z, 180, 0, 180, 0, 0, 0)
+            self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
+
         pos = (x, y, z, 180, 0, 180, 0, 0, 0)
         return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
 
@@ -72,7 +93,7 @@ class RobotActions(object):
             bool: True if the robot successfully reached the specified position,
             False otherwise.
         """
-        return self.move_cartesian(x, y, 350)
+        return self.move_cartesian(x, y, self.move_height)
 
     def clearing_position(self) -> bool:
         """Moves the robot to a clearing position.
@@ -84,7 +105,7 @@ class RobotActions(object):
             bool: True if the robot successfully moved to the clearing position,
             False otherwise.
         """
-        return self.move_cartesian(200, 0, 350)
+        return self.move_cartesian(200, 0, self.move_height)
 
     def grab_object(self) -> bool:
         """Commands the robot to grab the object at it's current position.
@@ -106,7 +127,7 @@ class RobotActions(object):
 
         sleep(0.5)
 
-        return self.move_cartesian(pos[0], pos[1], 350)
+        return self.move_cartesian(pos[0], pos[1], self.move_height)
 
     def release_object(self) -> bool:
         """Commands the robot to release a currently held object.
@@ -134,7 +155,7 @@ class RobotActions(object):
         if not self.controller.set_dout(30, False):
             return False
 
-        return self.move_cartesian(pos[0], pos[1], 350)
+        return self.move_cartesian(pos[0], pos[1], self.move_height)
 
     def capture_image(self) -> Image.Image | None:
         """
@@ -146,8 +167,9 @@ class RobotActions(object):
             or None if the image capture failed.
         """
 
-        if not self.clearing_position():
-            return None
+        self.get_position()
+        if not self.move_cartesian(200, 0, 350):
+            return False
 
         sleep(1)
 

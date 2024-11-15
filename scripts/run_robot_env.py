@@ -24,7 +24,13 @@ env.register_action(world_transform.transform_pixel_to_world_coords)
 env.register_const(
     name="world_boundaries",
     description="Defines the robot's operational area with coordinates (min_x, min_y, max_x, max_y).",  # noqa: E501
-    value=(150, -250, 400, 250),
+    value=robot.main_workspace,
+)
+env.register_const(
+    name="PlateA", description="Position of Plate A in world coordinates.", value=(0, 350)
+)
+env.register_const(
+    name="PlateB", description="Position of Plate B in world coordinates.", value=(-200, 350)
 )
 
 

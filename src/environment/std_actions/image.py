@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 
 class ImageActions:
@@ -19,11 +19,9 @@ class ImageActions:
         # convert to numpy array
         image = np.array(image)
 
-        # Convert to grayscale
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
         # Threshold the image to create a binary mask
-        _, binary = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY_INV)
+        binary = ~(image >= 150).all(axis=-1)
+        binary = binary.astype(np.uint8) * 255
 
         # Find contours of the objects
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -83,6 +81,35 @@ class ImageActions:
             Image.Image: The cropped image.
         """
         return image.crop(bbox)
+
+    def draw_bounding_boxes(
+        self,
+        image: Image.Image,
+        bboxes: list[tuple[int, int, int, int]],
+        color: str = "red",
+        width: int = 5,
+    ) -> Image.Image:
+        """Draws bounding boxes on a given image.
+
+        Args:
+            image (Image.Image): The Pillow image to draw on.
+            bboxes (list[tuple[int, int, int, int]]): List of bounding boxes in the format
+                (x1, y1, x2, y2).
+            color (str): The color of the bounding box outline.
+            width (int): The width of the bounding box outline.
+
+        Returns:
+            Image.Image: The image with bounding boxes drawn.
+        """
+        # Make a copy of the image to avoid modifying the original
+        image_with_boxes = image.copy()
+        draw = ImageDraw.Draw(image_with_boxes)
+
+        # Draw each bounding box
+        for bbox in bboxes:
+            draw.rectangle(bbox, outline=color, width=width)
+
+        return image_with_boxes
 
 
 def compute_area(box):

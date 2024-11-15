@@ -32,57 +32,60 @@ if __name__ == "__main__":
     robot = RobotActions()
     _, axes = plt.subplots(3)
 
-    # move to clearing position
-    robot.clearing_position()
-    sleep(1)
-
-    # compute anchor coordinates
-    image = robot.take_image()
+    # run capture image because its moving the arm to the correct height
+    image = robot.capture_image()
 
     image_anchors = detect_aruco_positions(image)
-    world_anchor = np.asarray(robot.get_position()[:2])
+    world_anchor = np.asarray(robot.get_position())
 
     print(image_anchors.keys())
 
+    anchor_ids = sorted(image_anchors.keys())
     # plot anchor image and detected coordinates
     axes[0].imshow(image)
-    for _i, pos in image_anchors.items():
-        axes[0].scatter(*pos, marker="x")
+    for i in anchor_ids:
+        axes[0].scatter(*image_anchors[i], marker="x")
 
     # move to point A
-    robot.move_to(world_anchor[0] + distance, world_anchor[1])
+    robot.move_cartesian(world_anchor[0] + distance, world_anchor[1], world_anchor[2])
     sleep(1)
 
     # compute point A coordinates
     image = robot.take_image()
     image_a = detect_aruco_positions(image)
-    world_a = np.asarray(robot.get_position()[:2])
+    world_a = np.asarray(robot.get_position())
 
     print(image_a.keys())
 
     # plot points A image and detected coordinates
     axes[1].imshow(image)
-    for _i, pos in image_a.items():
-        axes[1].scatter(*pos, marker="x")
+    for i in image_anchors:
+        if i in image_a:
+            axes[1].scatter(*image_a[i], marker="x")
 
     # move to point B
-    robot.move_to(world_anchor[0], world_anchor[1] + distance)
+    robot.move_cartesian(world_anchor[0], world_anchor[1] + distance, world_anchor[2])
     sleep(1)
 
     # compute point B coordinates
     image = robot.take_image()
     image_b = detect_aruco_positions(image)
-    world_b = np.asarray(robot.get_position()[:2])
+    world_b = np.asarray(robot.get_position())
 
     print(image_b.keys())
 
     # plot points B image and detected coordinates
     axes[2].imshow(image)
-    for _i, pos in image_b.items():
-        axes[2].scatter(*pos, marker="x")
+    for i in image_anchors:
+        if i in image_b:
+            axes[2].scatter(*image_b[i], marker="x")
 
     # show the plots
     plt.show()
+
+    def average_image_vector(image_pos):
+        shared_ids = set(list(anchor_ids)) & set(list(image_pos.keys()))
+        return sum((image_pos[p] - image_anchors[p]) for p in shared_ids) / len(shared_ids)
 
     # build world transform
     transform = WorldTransform(
@@ -90,23 +93,19 @@ if __name__ == "__main__":
         # specify anchor points and offset to account for difference between camera
         # and actuator in world space
         next(iter(image_anchors.values())),
-        world_anchor + np.asarray([67, 0]),
+        world_anchor[:2] + np.asarray([67, 0]),
         # compute the average transformation vectors in image space
-        sum((image_a[p] - image_anchors[p]) for p in image_anchors.keys()) / len(image_anchors),
-        sum((image_b[p] - image_anchors[p]) for p in image_anchors.keys()) / len(image_anchors),
+        average_image_vector(image_a),
+        average_image_vector(image_b),
         # compute the transformation vectors in world space
-        world_a - world_anchor,
-        world_b - world_anchor,
+        world_a[:2] - world_anchor[:2],
+        world_b[:2] - world_anchor[:2],
     )
 
     # save the world transform
     transform.save("./data/world_state.json")
 
-    # identify position of the validation color
-    robot.clearing_position()
-    sleep(1)
-
-    image = robot.take_image()
+    image = robot.capture_image()
     image.show()
 
     for target in detect_aruco_positions(image).values():
