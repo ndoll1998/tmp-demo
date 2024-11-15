@@ -1,6 +1,6 @@
 import torch
 from PIL import Image
-from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2 as FRCNN  # noqa: N812
+from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn as FRCNN  # noqa: N812
 from torchvision.transforms import functional as F  # noqa: N812
 
 
@@ -124,3 +124,13 @@ def intersection_proportion(box1, box2):
     box2_area = compute_area(box2)
 
     return intersection_area / min(box1_area, box2_area)
+
+
+if __name__ == "__main__":
+    actions = ImageActions()
+
+    image = Image.open("data/example_image.jpeg")
+    bboxes = actions.detect_objects(image)
+
+    for bbox in bboxes:
+        print(bbox)

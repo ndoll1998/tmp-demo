@@ -6,14 +6,13 @@ from environment.utils import pil_image_to_base64
 
 
 class VisionLanguageModelAction(OpenAIMultiModal):
-    def prompt(self, prompt: str, image: Image.Image | None = None) -> str:
-        """Prompt a language model with a prompt and (optional) an image.
-
-        This function is useful for getting a description of the image by an LLM.
+    def prompt_vision_model(self, prompt: str, image: Image.Image | None = None) -> str:
+        """Prompt a vision language model to get detailed
+        descriptions of images or objects in images.
 
         Args:
             prompt (str): The prompt for the LLM.
-            image (PIL.Image.Image, optional): An image that is given to the LLM.
+            image (PIL.Image.Imagel): An image that is given to the LLM.
 
         Returns:
             str: The response completion of the LLM.
