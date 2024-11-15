@@ -1,3 +1,5 @@
+from logging import getLogger
+
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.llms.openai import OpenAI
 
@@ -7,6 +9,7 @@ from environment.client import EnvClient
 from utils.logging import setup_logging
 
 setup_logging()
+logger = getLogger(__name__)
 
 
 class PatchedAgentService(AgentService):
@@ -15,7 +18,7 @@ class PatchedAgentService(AgentService):
         interpreter.reset()
 
 
-SYSTEM_PROMPT = """You are an agent that controls a robot arm.{environment_description}
+SYSTEM_PROMPT = """You are an multilingual agent that controls a robot arm.{environment_description}
 
 ## Python Interpreter
 You have access to a code interpreter tool, `python`, where you can execute Python code in a Jupyter-like environment. This environment has persistent memory, meaning all variables, functions, and objects that you define will remain available for subsequent calls to the `python` interpreter.
@@ -45,6 +48,8 @@ You capabilities are limited to textual understanding. Make use of the pre-defin
 
 ## Planning
 Before solving complex tasks, break down the user request into steps and think about how to solve them, before starting to implement them.
+
+When it is helpful always use the pre-defined functions to serve the user's needs. Especially the webcam. Do not ask the user before using a pre-defined function, just use it!
 """  # noqa: E501
 
 constants = []
@@ -54,6 +59,7 @@ functions = []
 env_client = EnvClient(host="localhost", port=8001, prefix="/env")
 if env_client.healthy:
     for info in env_client.get_action_infos():
+        logger.info(f"Got function {info.name}{info.signature}")
         functions.append(
             Function(
                 fn=env_client.action_to_callable(info),
@@ -64,6 +70,7 @@ if env_client.healthy:
         )
 
     for const in env_client.consts.values():
+        logger.info(f"Got constant {const.name}={const.value}")
         constants.append(
             Constant.from_defaults(
                 name=const.name,
@@ -76,6 +83,7 @@ if env_client.healthy:
 std_env_client = EnvClient(host="localhost", port=8002, prefix="/env")
 if std_env_client.healthy:
     for info in std_env_client.get_action_infos():
+        logger.info(f"Got function {info.name}{info.signature}")
         functions.append(
             Function(
                 fn=std_env_client.action_to_callable(info),
@@ -86,6 +94,7 @@ if std_env_client.healthy:
         )
 
     for const in std_env_client.consts.values():
+        logger.info(f"Got constant {const.name}={const.value}")
         constants.append(
             Constant.from_defaults(
                 name=const.name,

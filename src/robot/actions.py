@@ -138,7 +138,8 @@ class RobotActions(object):
 
     def capture_image(self, brightness: float = 1.5, contrast: float = 1.5) -> Image.Image | None:
         """
-        Captures an image from the webcam and returns the image as a Pillow Image object.
+        Capture an image from the webcam to see your environemt.
+        Returns the image as a Pillow Image object.
 
         Args:
             brightness (float): Brightness factor used to enhance the image brightness.

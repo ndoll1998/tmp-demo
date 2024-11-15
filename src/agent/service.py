@@ -66,7 +66,6 @@ class AgentService(APIRouter):
 
     async def run_task(self, message: str) -> AgentChatResponse:
         task = self.agent.create_task(message)
-        await self.gather_new_messages()
 
         while not (await self.agent.arun_step(task.task_id)).is_last:
             await self.gather_new_messages()
