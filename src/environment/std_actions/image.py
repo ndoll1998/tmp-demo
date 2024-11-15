@@ -1,14 +1,9 @@
-import torch
+import cv2
+import numpy as np
 from PIL import Image
-from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_fpn as FRCNN  # noqa: N812
-from torchvision.transforms import functional as F  # noqa: N812
 
 
 class ImageActions:
-    def __init__(self) -> None:
-        self.model = FRCNN(pretrained=True).eval()
-
-    @torch.inference_mode()
     def detect_objects(self, image: Image.Image) -> list[tuple[float, float, float, float]]:
         """Python function to detects objects in the given image using FRCNN.
 
@@ -20,45 +15,44 @@ class ImageActions:
             for the detected objects. Each bounding box is of shape (x0, y0, x1, y1)
             with coordinates in pixel-space.
         """
-        # Preprocess the image (convert to tensor and normalize)
-        image_tensor = F.to_tensor(image)  # Convert to tensor
-        image_tensor = image_tensor.unsqueeze(0)  # Add a batch dimension (1 image)
 
-        predictions = self.model(image_tensor)
+        # convert to numpy array
+        image = np.array(image)
 
-        # Access the prediction data
-        boxes = predictions[0]["boxes"]  # Bounding boxes (x1, y1, x2, y2)
-        labels = predictions[0]["labels"]  # Predicted labels for each box
-        scores = predictions[0]["scores"]  # Confidence scores for each box
+        # Convert to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Threshold the image to create a binary mask
+        _, binary = cv2.threshold(gray, 180, 255, cv2.THRESH_BINARY_INV)
+
+        # Find contours of the objects
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Get bounding boxes
+        bounding_boxes = [cv2.boundingRect(contour) for contour in contours]
+        bounding_boxes = [
+            (min(x, x + w), min(y, y + h), max(x, x + w), max(y, y + h))
+            for (x, y, w, h) in bounding_boxes
+        ]
 
         # Set thresholds
-        score_threshold = 0.0
         upper_area_threshold = 1000 * 1000  # Define the max area for a bounding box
         lower_area_threshold = 100 * 100
 
         # Filter boxes by score and area
         filtered_boxes = []
-        filtered_scores = []
-        filtered_labels = []
 
-        for box, score, label in zip(boxes, scores, labels, strict=True):
-            if score > score_threshold:
-                # Only include boxes with an area less than the threshold
-                if lower_area_threshold <= compute_area(box) <= upper_area_threshold:
-                    filtered_boxes.append(box)
-                    filtered_scores.append(score)
-                    filtered_labels.append(label)
+        for box in bounding_boxes:
+            # Only include boxes with an area less than the threshold
+            if lower_area_threshold <= compute_area(box) <= upper_area_threshold:
+                filtered_boxes.append(box)
 
-        iou_threshold = 0.9
+        iou_threshold = 0.6
         # Remove overlapping boxes with IoU > iou_threshold, keeping only the larger one
-        kept_boxes: list[torch.Tensor] = []
-        kept_scores = []
-        kept_labels = []
+        kept_boxes = []
 
         while len(filtered_boxes) > 0:
             current_box = filtered_boxes.pop(0)
-            current_score = filtered_scores.pop(0)
-            current_label = filtered_labels.pop(0)
 
             for i in range(len(kept_boxes)):
                 ip = intersection_proportion(current_box, kept_boxes[i])
@@ -71,16 +65,12 @@ class ImageActions:
                     if current_area > kept_area:
                         # Replace the kept box with the larger current box
                         kept_boxes[i] = current_box
-                        kept_scores[i] = current_score
-                        kept_labels[i] = current_label
                     break
 
             else:
                 kept_boxes.append(current_box)
-                kept_scores.append(current_score)
-                kept_labels.append(current_label)
 
-        return [bbox.tolist() for bbox in kept_boxes]
+        return kept_boxes
 
     def crop_image(self, image: Image.Image, bbox: tuple[int, int, int, int]) -> Image.Image:
         """Python function to crop an image to the specified bounding box.

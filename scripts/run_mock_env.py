@@ -17,13 +17,9 @@ env.register_const(
 
 
 @env.register_action
-def capture_image(brightness: float = 1.5, contrast: float = 1.5) -> Image.Image | None:
+def capture_image() -> Image.Image | None:
     """
     Captures an image from the webcam and returns the image as a Pillow Image object.
-
-    Args:
-        brightness (float): Brightness factor used to enhance the image brightness.
-        contrast (float): Contrast factor used to enhance the image contrast.
 
     Returns:
         PIL.Image.Image | None: The image if capture is successful,

@@ -26,8 +26,6 @@ def detect_aruco_positions(pil_image: Image.Image):
 
 if __name__ == "__main__":
     distance = 50
-    brightness = 1.3
-    contrast = 1.3
 
     validation_color = "blue"
 
@@ -39,7 +37,8 @@ if __name__ == "__main__":
     sleep(1)
 
     # compute anchor coordinates
-    image = robot.take_image(brightness, contrast)
+    image = robot.take_image()
+
     image_anchors = detect_aruco_positions(image)
     world_anchor = np.asarray(robot.get_position()[:2])
 
@@ -55,7 +54,7 @@ if __name__ == "__main__":
     sleep(1)
 
     # compute point A coordinates
-    image = robot.take_image(brightness, contrast)
+    image = robot.take_image()
     image_a = detect_aruco_positions(image)
     world_a = np.asarray(robot.get_position()[:2])
 
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     sleep(1)
 
     # compute point B coordinates
-    image = robot.take_image(brightness, contrast)
+    image = robot.take_image()
     image_b = detect_aruco_positions(image)
     world_b = np.asarray(robot.get_position()[:2])
 
@@ -107,7 +106,7 @@ if __name__ == "__main__":
     robot.clearing_position()
     sleep(1)
 
-    image = robot.take_image(brightness, contrast)
+    image = robot.take_image()
     image.show()
 
     for target in detect_aruco_positions(image).values():

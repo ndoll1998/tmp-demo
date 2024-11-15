@@ -1,11 +1,11 @@
 services:
-  stt:
-    image: "stt-azure-speech:latest"
-    build:
-      context: "../stt-azure-speech"
-    network_mode: host
-    environment:
-      - NODE_ENV=production
+  #stt:
+  #  image: "stt-azure-speech:latest"
+  #  build:
+  #    context: "../stt-azure-speech"
+  #  network_mode: host
+  #  environment:
+  #    - NODE_ENV=production
 
   std_env:
     image: "robotdemo:latest"
@@ -27,7 +27,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - OPENAI_API_KEY
-    command: "python scripts/run_mock_env.py"
+    command: "python scripts/run_robot_env.py"
 
   agent:
     image: "robotdemo:latest"

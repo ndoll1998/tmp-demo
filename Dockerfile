@@ -9,6 +9,9 @@ WORKDIR /app
 # Update the package list and install Git
 RUN apt-get update && apt-get install -y git && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    libgl1 \
+    libglib2.0-0
 
 COPY pyproject.toml .
 RUN mkdir src/ && \

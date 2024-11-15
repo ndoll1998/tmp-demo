@@ -4,8 +4,9 @@ from time import sleep
 from typing import Callable
 
 import cv2
+import numpy as np
 from cri_lib import CRIController
-from PIL import Image, ImageEnhance
+from PIL import Image
 
 
 class RobotActions(object):
@@ -135,14 +136,10 @@ class RobotActions(object):
 
         return self.move_cartesian(pos[0], pos[1], 350)
 
-    def capture_image(self, brightness: float = 1.3, contrast: float = 1.3) -> Image.Image | None:
+    def capture_image(self) -> Image.Image | None:
         """
         Capture an image from the webcam to see your environemt.
         Returns the image as a Pillow Image object.
-
-        Args:
-            brightness (float): Brightness factor used to enhance the image brightness.
-            contrast (float): Contrast factor used to enhance the image contrast.
 
         Returns:
             PIL.Image.Image | None: The image if capture is successful,
@@ -154,24 +151,38 @@ class RobotActions(object):
 
         sleep(1)
 
-        return self.take_image(brightness, contrast)
+        return self.take_image()
 
-    def take_image(self, brightness: float = 1.2, contrast: float = 1.3) -> Image.Image | None:
+    def take_image(self) -> Image.Image | None:
         ret, frame = self.cap.read()
         if not ret:
             return None
         # Convert the OpenCV frame (BGR) to RGB format (Pillow expects RGB)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # Convert the frame to a PIL image
-        pil_image = Image.fromarray(frame_rgb)
-        # Brighten the image by increasing the brightness
-        enhancer = ImageEnhance.Brightness(pil_image)
-        bright_image = enhancer.enhance(brightness)
-        # adjust contrast
-        contrast_enhancer = ImageEnhance.Contrast(bright_image)
-        bright_contrast_image = contrast_enhancer.enhance(contrast)
 
-        return bright_contrast_image
+        gray = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2GRAY)
+
+        # Calculate grayscale histogram
+        hist = cv2.calcHist([gray], [0], None, [256], [0, 256])
+
+        # Calculate cumulative distribution
+        accumulator = hist.cumsum()
+
+        # Locate points to clip
+        max_value = accumulator[-1]
+        clip_value = (max_value / 100.0) / 2.0
+        min_gray = np.searchsorted(accumulator, clip_value)
+        max_gray = np.searchsorted(accumulator, max_value - clip_value)
+
+        # Stretch histogram
+        alpha = 255 / (max_gray - min_gray)
+        beta = -min_gray * alpha
+
+        # Apply new alpha and beta to adjust brightness and contrast
+        adjusted = cv2.convertScaleAbs(frame_rgb, alpha=alpha, beta=beta)
+
+        # Convert and return the frame to a PIL image
+        return Image.fromarray(adjusted)
 
     def shutdown(self):
         if self.controller.connected:

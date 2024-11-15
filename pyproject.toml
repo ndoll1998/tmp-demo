@@ -12,6 +12,7 @@ dependencies = [
     "openai",
     "ipython",
     "nbformat",
+    "opencv-python",
     "websockets",
     "torch",
     "torchvision",
