@@ -6,7 +6,7 @@ services:
     network_mode: host
     environment:
       - PYTHONUNBUFFERED=1
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY
     command: "python scripts/run_std_env.py"
 
   env:
@@ -18,7 +18,7 @@ services:
       - ./data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY
     command: "python scripts/run_mock_env.py"
 
   agent:
@@ -31,5 +31,5 @@ services:
       - std_env
     environment:
       - PYTHONUNBUFFERED=1
-      - OPENAI_API_KEY=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
+      - OPENAI_API_KEY
     command: "python scripts/run_agent.py"

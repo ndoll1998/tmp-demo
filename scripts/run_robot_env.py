@@ -16,9 +16,9 @@ for action in robot.actions:
     env.register_action(action)
 
 # register world transform actions
-world_transform = WorldTransform("data/world_state.yaml")
+world_transform = WorldTransform.load("data/world_state.json")
 env.register_action(world_transform.transform_pixel_to_world_coords)
-env.register_action(world_transform.transform_world_to_pixel_coords)
+# env.register_action(world_transform.transform_world_to_pixel_coords)
 
 # register world boundaries
 env.register_const(

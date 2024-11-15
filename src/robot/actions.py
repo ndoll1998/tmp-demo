@@ -16,6 +16,7 @@ class RobotActions(object):
         self.cap = cv2.VideoCapture(self.device_id)
         if not self.cap.isOpened():
             raise ConnectionError(f"Could not connect to webcam with device_id={device_id}")
+
         # connect to robot
         self.controller = CRIController()
         self.controller.connect(ip)
@@ -33,7 +34,11 @@ class RobotActions(object):
         self.controller.set_override(90.0)
 
     def get_position(self):
-        return self.controller.robot_state.position_robot
+        return (
+            self.controller.robot_state.position_robot.X,
+            self.controller.robot_state.position_robot.Y,
+            self.controller.robot_state.position_robot.Z,
+        )
 
     @property
     def actions(self) -> list[Callable]:
@@ -50,6 +55,10 @@ class RobotActions(object):
         self.controller.set_dout(30, False)
         self.clearing_position()
 
+    def move_cartesian(self, x: float, y: float, z: float) -> bool:
+        pos = (x, y, z, 180, 0, 180, 0, 0, 0)
+        return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
+
     def move_to(self, x: float, y: float) -> bool:
         """
         Commands the robot to move to a specified (x, y) position in world space.
@@ -62,8 +71,7 @@ class RobotActions(object):
             bool: True if the robot successfully reached the specified position,
             False otherwise.
         """
-        pos = (x, y, 350, 180, 0, 180, 0, 0, 0)
-        return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
+        return self.move_cartesian(x, y, 350)
 
     def clearing_position(self) -> bool:
         """Moves the robot to a clearing position.
@@ -75,8 +83,7 @@ class RobotActions(object):
             bool: True if the robot successfully moved to the clearing position,
             False otherwise.
         """
-        pos = (200, 0, 350, 180, 0, 180, 0, 0, 0)
-        return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
+        return self.move_cartesian(200, 0, 350)
 
     def grab_object(self) -> bool:
         """Commands the robot to grab the object at it's current position.
@@ -90,10 +97,7 @@ class RobotActions(object):
 
         pos = self.get_position()
 
-        pos = (pos.X, pos.Y, 65, 180, 0, 180, 0, 0, 0)
-        if not self.controller.move_cartesian(
-            *pos, velocity=self.velocity, wait_move_finished=True
-        ):
+        if not self.move_cartesian(pos[0], pos[1], 65):
             return False
 
         if not self.controller.set_dout(31, True):
@@ -101,8 +105,7 @@ class RobotActions(object):
 
         sleep(0.5)
 
-        pos = (pos[0], pos[1], 350, 180, 0, 180, 0, 0, 0)
-        return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
+        return self.move_cartesian(pos[0], pos[1], 350)
 
     def release_object(self) -> bool:
         """Commands the robot to release a currently held object.
@@ -116,10 +119,7 @@ class RobotActions(object):
 
         pos = self.get_position()
 
-        pos = (pos.X, pos.Y, 100, 180, 0, 180, 0, 0, 0)
-        if not self.controller.move_cartesian(
-            *pos, velocity=self.velocity, wait_move_finished=True
-        ):
+        if not self.move_cartesian(pos[0], pos[1], 100):
             return False
 
         if not self.controller.set_dout(31, False):
@@ -133,10 +133,9 @@ class RobotActions(object):
         if not self.controller.set_dout(30, False):
             return False
 
-        pos = (pos[0], pos[1], 350, 180, 0, 180, 0, 0, 0)
-        return self.controller.move_cartesian(*pos, velocity=self.velocity, wait_move_finished=True)
+        return self.move_cartesian(pos[0], pos[1], 350)
 
-    def capture_image(self, brightness: float = 1.5, contrast: float = 1.5) -> Image.Image | None:
+    def capture_image(self, brightness: float = 1.3, contrast: float = 1.3) -> Image.Image | None:
         """
         Capture an image from the webcam to see your environemt.
         Returns the image as a Pillow Image object.
@@ -153,6 +152,11 @@ class RobotActions(object):
         if not self.clearing_position():
             return None
 
+        sleep(1)
+
+        return self.take_image(brightness, contrast)
+
+    def take_image(self, brightness: float = 1.2, contrast: float = 1.3) -> Image.Image | None:
         ret, frame = self.cap.read()
         if not ret:
             return None

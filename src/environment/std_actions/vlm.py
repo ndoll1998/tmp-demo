@@ -7,7 +7,7 @@ from environment.utils import pil_image_to_base64
 
 class VisionLanguageModelAction(OpenAIMultiModal):
     def prompt_vision_model(self, prompt: str, image: Image.Image | None = None) -> str:
-        """Prompt a vision language model to get detailed
+        """Python function used to prompt a vision language model to get detailed
         descriptions of images or objects in images.
 
         Args:

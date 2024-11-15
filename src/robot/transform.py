@@ -1,38 +1,57 @@
+from __future__ import annotations
+
+import json
+
 import numpy as np
-import yaml
+from numpy.typing import NDArray
 
 
 class WorldTransform:
-    def __init__(self, config_file: str) -> None:
-        with open(config_file) as fp:
-            world_state = yaml.safe_load(fp)
+    def __init__(
+        self,
+        image_resolution: NDArray,
+        image_anchor: NDArray,
+        world_anchor: NDArray,
+        image_v1: NDArray,
+        image_v2: NDArray,
+        world_v1: NDArray,
+        world_v2: NDArray,
+    ) -> None:
+        # image resolution
+        self.resolution = image_resolution
+        # anchor points
+        self.image_anchor = image_anchor
+        self.world_anchor = world_anchor
+        # transformation matrices
+        self.image_transform = np.column_stack((image_v1, image_v2))
+        self.world_transform = np.column_stack((world_v1, world_v2))
 
-        self.real_a = np.array(
-            [world_state["robot_coordinates"]["A"]["x"], world_state["robot_coordinates"]["A"]["y"]]
-        )
-        self.real_b = np.array(
-            [world_state["robot_coordinates"]["B"]["x"], world_state["robot_coordinates"]["B"]["y"]]
-        )
-        self.real_c = np.array(
-            [world_state["robot_coordinates"]["C"]["x"], world_state["robot_coordinates"]["C"]["y"]]
-        )
-        self.pixel_a = np.array(
-            [world_state["pixel_coordinates"]["A"]["x"], world_state["pixel_coordinates"]["A"]["y"]]
-        )
-        self.pixel_b = np.array(
-            [world_state["pixel_coordinates"]["B"]["x"], world_state["pixel_coordinates"]["B"]["y"]]
-        )
-        self.pixel_c = np.array(
-            [world_state["pixel_coordinates"]["C"]["x"], world_state["pixel_coordinates"]["C"]["y"]]
-        )
+    def save(self, file_path: str) -> None:
+        state = {
+            "image_resolution": self.resolution.tolist(),
+            "image_anchor": self.image_anchor.tolist(),
+            "world_anchor": self.world_anchor.tolist(),
+            "image_transform": self.image_transform.tolist(),
+            "world_transform": self.world_transform.tolist(),
+        }
 
-        self.v1 = self.pixel_b - self.pixel_a
-        self.v2 = self.pixel_c - self.pixel_a
-        self.v1_real = self.real_b - self.real_a
-        self.v2_real = self.real_c - self.real_a
+        with open(file_path, "w+") as fp:
+            fp.write(json.dumps(state, indent=2))
 
-        self.A = np.column_stack((self.v1, self.v2))
-        self.A_real = np.column_stack((self.v1_real, self.v2_real))
+    @staticmethod
+    def load(file_path: str) -> WorldTransform:
+        with open(file_path, "r") as f:
+            state = json.loads(f.read())
+
+        return WorldTransform(
+            image_resolution=np.asarray(state["image_resolution"]),
+            image_anchor=np.asarray(state["image_anchor"]),
+            world_anchor=np.asarray(state["world_anchor"]),
+            image_v1=np.asarray(state["image_transform"][0]),
+            image_v2=np.asarray(state["image_transform"][1]),
+            world_v1=np.asarray(state["world_transform"][0]),
+            world_v2=np.asarray(state["world_transform"][1]),
+        )
 
     def transform_pixel_to_world_coords(self, x: int, y: int) -> tuple[float, float]:
         """Transform pixel coordinates to world coordinates.
@@ -43,27 +62,20 @@ class WorldTransform:
         Returns:
             tuple[float, float]: The corresponding point (x, y) in world space.
         """
-        d = np.array([x, y])
-        v = d - self.pixel_a
-        coefficients, _, _, _ = np.linalg.lstsq(self.A, v, rcond=None)
+
+        # transform pixel coordinate relative to camera center
+        target = np.asarray([x, y])
+        target = self.resolution / 2 + (self.image_anchor - target)
+
+        v = target - self.image_anchor
+
+        coefficients, _, _, _ = np.linalg.lstsq(self.image_transform, v, rcond=None)
         alpha, beta = coefficients
 
-        d_real = alpha * self.v1_real + beta * self.v2_real + self.real_a
-        return (d_real[0], d_real[1])
+        target_world = (
+            alpha * self.world_transform[:, 0]
+            + beta * self.world_transform[:, 1]
+            + self.world_anchor
+        )
 
-    def transform_world_to_pixel_coords(self, x: float, y: float) -> tuple[int, int]:
-        """Transform world coordinates to pixel coordinates.
-
-        Args:
-            x (int): The x-coordinate in world space.
-            y (int): The y-coordinate in world space.
-        Returns:
-            tuple[float, float]: The corresponding point (x, y) in pixel space.
-        """
-        d = np.array([x, y])
-        v = d - self.real_a
-        coefficients, _, _, _ = np.linalg.lstsq(self.A_real, v, rcond=None)
-        alpha, beta = coefficients
-
-        d_real = np.round(alpha * self.v1 + beta * self.v2 + self.pixel_a, decimals=0).astype(int)
-        return (d_real[0], d_real[1])
+        return target_world[0], target_world[1]

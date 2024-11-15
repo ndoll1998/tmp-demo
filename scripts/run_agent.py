@@ -46,11 +46,6 @@ CAUTION: The pre-defined functions and variables are only available inside the i
 
 ## Modality
 You capabilities are limited to textual understanding. Make use of the pre-defined functions inside the code interpreter to interpret other modalities, e.g. images, in code.
-
-## Planning
-Before solving complex tasks, break down the user request into steps and think about how to solve them, before starting to implement them.
-
-When it is helpful always use the pre-defined functions to serve the user's needs. Especially the webcam. Do not ask the user before using a pre-defined function, just use it!
 """  # noqa: E501
 
 constants = []
@@ -122,7 +117,7 @@ agent = OpenAIAgent.from_tools(
     llm=OpenAI(model="gpt-4o"),
     tools=[interpreter.to_tool()],
     system_prompt=SYSTEM_PROMPT,
-    max_function_calls=50,
+    max_function_calls=50
     # verbose=True,
 )
 
