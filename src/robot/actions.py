@@ -97,7 +97,7 @@ class RobotActions(object):
 
         pos = self.get_position()
 
-        if not self.move_cartesian(pos[0], pos[1], 68):
+        if not self.move_cartesian(pos[0], pos[1], 65):
             return False
 
         if not self.controller.set_dout(31, True):
@@ -141,9 +141,8 @@ class RobotActions(object):
         Returns the image as a Pillow Image object.
 
         Args:
-            brightness (float): Brightness factor used to enhance the image brightness. Default "
-                "is `1.3`.
-            contrast (float): Contrast factor used to enhance the image contrast. Default is `1.3`.
+            brightness (float): Brightness factor used to enhance the image brightness.
+            contrast (float): Contrast factor used to enhance the image contrast.
 
         Returns:
             PIL.Image.Image | None: The image if capture is successful,
@@ -153,9 +152,11 @@ class RobotActions(object):
         if not self.clearing_position():
             return None
 
+        sleep(1)
+
         return self.take_image(brightness, contrast)
 
-    def take_image(self, brightness: float = 1.3, contrast: float = 1.3) -> Image.Image | None:
+    def take_image(self, brightness: float = 1.2, contrast: float = 1.3) -> Image.Image | None:
         ret, frame = self.cap.read()
         if not ret:
             return None
