@@ -121,6 +121,7 @@ agent = OpenAIAgent.from_tools(
     llm=OpenAI(model="gpt-4o"),
     tools=[interpreter.to_tool()],
     system_prompt=SYSTEM_PROMPT,
+    max_function_calls=50,
     # verbose=True,
 )
 
