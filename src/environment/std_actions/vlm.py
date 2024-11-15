@@ -16,7 +16,7 @@ class VisionLanguageModelAction(OpenAIMultiModal):
             image (PIL.Image.Image, optional): An image that is given to the LLM.
 
         Returns:
-            (str): The response completion of the LLM.
+            str: The response completion of the LLM.
         """
         # If an image is provided, process with both image and text
         if image is not None:

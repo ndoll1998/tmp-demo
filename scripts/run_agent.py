@@ -62,6 +62,12 @@ CAUTION: The pre-defined functions and variables are only available inside the i
 - **Reuse Existing Variables**: When variables are created in previous steps, use them directly rather than recreating them. This reduces redundant code and ensures efficient use of the persistent environment.
 - **Store Outputs as Variables**: When calling functions that return outputs needed later, store them in variables. This allows you to reference these variables in subsequent code without recomputation.
 - **Avoid Hard-Coding**: Do not hard-code specific values; instead, use variables and write code that is generic and reusable. This ensures flexibility and adaptability in different contexts.
+
+## Modality
+You capabilities are limited to textual understanding. Make use of the pre-defined functions inside the code interpreter to interpret other modalities, e.g. images, in code.
+
+## Planning
+Before solving complex tasks, break down the user request into steps and think about how to solve them, before starting to implement them.
 """  # noqa: E501
 
 constants = []

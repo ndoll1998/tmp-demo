@@ -51,7 +51,8 @@ class NotebookCallback(AgentCallback):
                         cell = nbf.v4.new_code_cell(args[self.interpreter_argument_name])
                         self.add_cells(cell)
                     else:
-                        raise NotImplementedError()
+                        pass
+                        # raise NotImplementedError()
 
         elif chat_message.role == MessageRole.TOOL:
             self.add_cell_output(chat_message.content.strip())

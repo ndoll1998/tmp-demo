@@ -1,14 +1,13 @@
 import logging
 import logging.config
 import sys
-from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
 
 from environment.remote import RemoteEnv
 from robot.actions import RobotActions
-from robot.vision import VisionActions
+from robot.transform import WorldTransform
 
 # Define basic configuration
 logging_config = {
@@ -34,50 +33,27 @@ logging_config = {
 # Apply the configuration
 logging.config.dictConfig(logging_config)
 
-ENV_DESCRIPTION = """The environment is a workspace where a robot arm can move, interact with objects, and perform basic manipulation tasks. The robot arm can precisely navigate to different coordinates within this workspace, allowing it to approach and engage with various objects positioned throughout the area. It can grab a single object, holding it securely until instructed to release it. The robot can only handle one object at a time and does not have the ability to pick up multiple objects simultaneously. Tasks may involve positioning, moving, or sorting objects based on their location or type."""  # noqa: E501
+ENV_DESCRIPTION = """## Environment
+The environment is a workspace where a robot arm can move, interact with objects, and perform basic manipulation tasks. The robot arm can precisely navigate to different coordinates within this workspace, allowing it to approach and engage with various objects positioned throughout the area. It can grab a single object, holding it securely until instructed to release it. The robot can only handle one object at a time and does not have the ability to pick up multiple objects simultaneously. Tasks may involve positioning, moving, or sorting objects based on their location or type."""  # noqa: E501
 
 env = RemoteEnv(description=ENV_DESCRIPTION)
-
-env.register_const(
-    "conveyer_belt_bbox",
-    value=(0, 0, 20, 100),
-    description="The bounding box coordinates of the conveyer belt as (x_0, y_0, x_1, y_1).",
-)
-env.register_const(
-    "conveyer_belt_height", value=10, description="The height the conveyer belt is placed at."
-)
 
 # register all robot actions
 robot = RobotActions()
 for action in robot.actions:
     env.register_action(action)
 
-# register all vision actions
-vision = VisionActions()
-env.register_action(vision.capture_image)
+# register world transform actions
+world_transform = WorldTransform("data/world_state.yaml")
+env.register_action(world_transform.transform_pixel_to_world_coords)
+env.register_action(world_transform.transform_world_to_pixel_coords)
 
-
-@env.register_action
-def detect_objects() -> list[dict[str, Any]]:
-    """Detects objects in the curent image and returns a list of detected objects.
-
-    Each detected object is represented as a dictionary containing:
-    - "object_id" (int): A unique identifier for the object.
-    - "bbox" (tuple[int, int, int, int]): The bounding box coordinates for the object as
-      (x_min, y_min, x_max, y_max), defining the object's location in the image.
-    - "description" (str): A label or description for the object.
-
-    Returns:
-        list[dict[str, Any]]: A list of dictionaries, each representing a detected object
-        with "id", "bbox", and "description" fields.
-    """
-
-    return [
-        {"id": 0, "bbox": (300, 150, 350, 200), "description": "Spray"},
-        {"id": 1, "bbox": (300, -150, 350, -200), "description": "Mug"},
-        {"id": 2, "bbox": (200, -25, 250, 25), "description": "Pen"},
-    ]
-
+# register world boundaries
+env.register_const(
+    name="world_boundaries",
+    description="Defines the robot's operational area with coordinates (min_x, min_y, max_x, max_y).",  # noqa: E501
+    value=(150, -250, 400, 250),
+)
 
 # create the app that serves the environment
 app = FastAPI()

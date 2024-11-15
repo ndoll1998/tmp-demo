@@ -13,6 +13,9 @@ dependencies = [
     "ipython",
     "nbformat",
     "websockets",
+    "torch",
+    "torchvision",
+    "matplotlib",
     "cri_lib@git+https://github.com/CommonplaceRobotics/CRI-Python-Lib.git",
 ]
 
