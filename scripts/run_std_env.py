@@ -20,8 +20,10 @@ if __name__ == "__main__":
     import uvicorn
     from fastapi import FastAPI
 
+    from utils.constants import STD_ENV_HOST_ADRESS, STD_ENV_PORT
+
     # create the app that serves the environment
     app = FastAPI()
     app.include_router(env, prefix="/env")
 
-    uvicorn.run(app, host="127.0.0.1", port=8002, reload=False)
+    uvicorn.run(app, host=STD_ENV_HOST_ADRESS, port=STD_ENV_PORT, reload=False)

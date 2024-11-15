@@ -9,16 +9,24 @@ if __name__ == "__main__":
     from agent.callbacks import LoggingCallback
     from environment.client import EnvClient
     from utils.callbacks import NotebookCallbackWithEnv
+    from utils.constants import (
+        AGENT_HOST_ADRESS,
+        AGENT_PORT,
+        ENV_HOST_ADRESS,
+        ENV_PORT,
+        STD_ENV_HOST_ADRESS,
+        STD_ENV_PORT,
+    )
     from utils.logging import setup_logging
     from utils.ws import connect_and_receive_messages
 
     setup_logging()
 
     # reset agent
-    httpx.get("http://localhost:8000/reset")
+    httpx.get(f"http://{AGENT_HOST_ADRESS}:{AGENT_PORT}/reset")
 
-    env_client = EnvClient(host="localhost", port=8001, prefix="/env")
-    std_env_client = EnvClient(host="localhost", port=8002, prefix="/env")
+    env_client = EnvClient(host=ENV_HOST_ADRESS, port=ENV_PORT)
+    std_env_client = EnvClient(host=STD_ENV_HOST_ADRESS, port=STD_ENV_PORT)
 
     callbacks = [
         LoggingCallback(),
@@ -31,4 +39,8 @@ if __name__ == "__main__":
 
     while (user_input := input("USER: ")) != "":
         # Run the WebSocket client
-        asyncio.run(connect_and_receive_messages(user_input, callbacks=callbacks))
+        asyncio.run(
+            connect_and_receive_messages(
+                user_input, callbacks=callbacks, host=AGENT_HOST_ADRESS, port=AGENT_PORT
+            )
+        )

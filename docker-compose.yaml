@@ -1,0 +1,29 @@
+services:
+  std_env:
+    image: "robotdemo:latest"
+    build:
+      context: "."
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: "python scripts/run_std_env.py"
+
+  env:
+    image: "robotdemo:latest"
+    build:
+      context: "."
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: "python scripts/run_mock_env.py"
+
+  agent:
+    image: "robotdemo:latest"
+    build:
+      context: "."
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENV_HOST_ADRESS=env
+      - STD_ENV_HOST_ADRESS=std_env
+    command: "python scripts/run_agent.py"
+    depends_on:
+      - env
+      - std_env

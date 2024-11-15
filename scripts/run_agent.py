@@ -6,6 +6,7 @@ from llama_index.llms.openai import OpenAI
 from agent.code_interpreter import CodeInterpreter, Constant, Function
 from agent.service import AgentService
 from environment.client import EnvClient
+from utils.constants import ENV_HOST_ADRESS, ENV_PORT, STD_ENV_HOST_ADRESS, STD_ENV_PORT
 from utils.logging import setup_logging
 
 setup_logging()
@@ -56,7 +57,7 @@ constants = []
 functions = []
 
 # get functions and constants from the robot environment
-env_client = EnvClient(host="localhost", port=8001, prefix="/env")
+env_client = EnvClient(host=ENV_HOST_ADRESS, port=ENV_PORT)
 if env_client.healthy:
     for info in env_client.get_action_infos():
         logger.info(f"Got function {info.name}{info.signature}")
@@ -80,7 +81,7 @@ if env_client.healthy:
         )
 
 # get functions and constants from the std environment
-std_env_client = EnvClient(host="localhost", port=8002, prefix="/env")
+std_env_client = EnvClient(host=STD_ENV_HOST_ADRESS, port=STD_ENV_PORT)
 if std_env_client.healthy:
     for info in std_env_client.get_action_infos():
         logger.info(f"Got function {info.name}{info.signature}")
@@ -131,6 +132,8 @@ if __name__ == "__main__":
     from fastapi import FastAPI
     from fastapi.middleware.cors import CORSMiddleware
 
+    from utils.constants import AGENT_HOST_ADRESS, AGENT_PORT
+
     app = FastAPI()
     app.include_router(AgentService(agent))
 
@@ -142,4 +145,4 @@ if __name__ == "__main__":
         allow_headers=["*"],  # Allow all headers (e.g., Content-Type, Authorization)
     )
 
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=False, workers=1)
+    uvicorn.run(app, host=AGENT_HOST_ADRESS, port=AGENT_PORT, reload=False, workers=1)
