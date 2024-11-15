@@ -1,4 +1,12 @@
 services:
+  stt:
+    image: "stt-azure-speech:latest"
+    build:
+      context: "../stt-azure-speech"
+    network_mode: host
+    environment:
+      - NODE_ENV=production
+
   std_env:
     image: "robotdemo:latest"
     build:
