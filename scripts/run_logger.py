@@ -4,8 +4,6 @@
 if __name__ == "__main__":
     import asyncio
 
-    import httpx
-
     from agent.callbacks import LoggingCallback
     from environment.client import EnvClient
     from utils.callbacks import NotebookCallbackWithEnv
@@ -13,9 +11,6 @@ if __name__ == "__main__":
     from utils.ws import connect_and_receive_messages
 
     setup_logging()
-
-    # reset agent
-    httpx.get("http://localhost:8000/reset")
 
     env_client = EnvClient(host="localhost", port=8001, prefix="/env")
     std_env_client = EnvClient(host="localhost", port=8002, prefix="/env")
@@ -29,6 +24,5 @@ if __name__ == "__main__":
         ),
     ]
 
-    while (user_input := input("USER: ")) != "":
-        # Run the WebSocket client
-        asyncio.run(connect_and_receive_messages(user_input, callbacks=callbacks))
+    while True:
+        asyncio.run(connect_and_receive_messages(callbacks=callbacks))

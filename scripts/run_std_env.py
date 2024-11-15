@@ -1,40 +1,14 @@
-import logging
-import logging.config
-import sys
-
 from environment.remote import RemoteEnv
 from environment.std_actions.image import ImageActions
 from environment.std_actions.vlm import VisionLanguageModelAction
+from utils.logging import setup_logging
 
-# Define basic configuration
-logging_config = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "stream": sys.stdout,
-            "formatter": "standard",
-            "level": "INFO",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-}
-
-# Apply the configuration
-logging.config.dictConfig(logging_config)
-
-vlm = VisionLanguageModelAction(model="gpt-4o")
+setup_logging()
 
 env = RemoteEnv()
-env.register_action(vlm.prompt)
 
+vlm = VisionLanguageModelAction(model="gpt-4o")
+env.register_action(vlm.prompt_vision_model)
 
 # register object detection
 image_actions = ImageActions()
@@ -49,4 +23,5 @@ if __name__ == "__main__":
     # create the app that serves the environment
     app = FastAPI()
     app.include_router(env, prefix="/env")
+
     uvicorn.run(app, host="127.0.0.1", port=8002, reload=False)

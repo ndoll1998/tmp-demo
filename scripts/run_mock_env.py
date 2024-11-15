@@ -1,38 +1,11 @@
-import logging
-import logging.config
-import sys
-
-import uvicorn
-from fastapi import FastAPI
+from PIL import Image
 
 from environment.remote import RemoteEnv
+from utils.logging import setup_logging
 
-# Define basic configuration
-logging_config = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "stream": sys.stdout,
-            "formatter": "standard",
-            "level": "INFO",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-}
-
-# Apply the configuration
-logging.config.dictConfig(logging_config)
+setup_logging()
 
 env = RemoteEnv()
-
 env.register_const(
     "conveyer_belt_bbox",
     value=(0, 0, 20, 100),
@@ -44,86 +17,69 @@ env.register_const(
 
 
 @env.register_action
-def detect_objects() -> dict[str, str]:
-    """Detects objects in the scene.
+def capture_image(brightness: float = 1.5, contrast: float = 1.5) -> Image.Image | None:
+    """
+    Captures an image from the webcam and returns the image as a Pillow Image object.
+
+    Args:
+        brightness (float): Brightness factor used to enhance the image brightness.
+        contrast (float): Contrast factor used to enhance the image contrast.
 
     Returns:
-        (dict[str, str]): A dictionary of the following schema:
-        {
-            <object_id (str)>: {
-                "description": <object_description (str)>,
-                "x": <(left_x, right_x) (tuple[float, float])>,
-                "y": <(upper_y, lower_y) tuple[float, float]>,
-                "z": <height (float)>
-            }
-        }
+        PIL.Image.Image | None: The image if capture is successful,
+        or None if the image capture failed.
     """
-    return {
-        "0": {
-            "description": "A green apple.",
-            "x": (20, 22),
-            "y": (78, 80),
-            "z": 10,
-        },
-        "1": {
-            "description": "A lemon.",
-            "x": (10, 13),
-            "y": (40, 42),
-            "z": 10,
-        },
-        "2": {
-            "description": "An orange.",
-            "x": (56, 58),
-            "y": (33, 36),
-            "z": 10,
-        },
-    }
+    return Image.open("data/example_image.jpeg")
 
 
 @env.register_action
-def grab_object(x: float, y: float, z: float) -> bool:
-    """Grabs an object at position (x, y, z). Make sure to
-    always grab at the middlepoint of an object.
+def grab_object() -> bool:
+    """Commands the robot to grab the object at it's current position.
 
-    Args:
-        x (float): The x coordinate to grab at.
-        y (float): The y coordinate to grab at.
-        z (float): The z coordinate to grab at.
+    This function instructs the robot to attempt to grasp an object
+    placed at it's current position..
 
     Returns:
-        (bool): True if successfull, False otherwise
+        bool: True if the robot successfully grabbed the object, False otherwise.
     """
     return True
 
 
 @env.register_action
 def release_object() -> bool:
-    """Release the current object.
+    """Commands the robot to release a currently held object.
+
+    This function sends a command to the robot to release the object it is
+    currently holding, dropping it at its current position.
 
     Returns:
-        (bool): True if successfull, False otherwise
+        bool: True if the robot successfully released the object, False otherwise.
     """
     return True
 
 
 @env.register_action
-def move(obj_id: str, x: float, y: float, z: float) -> bool:
-    """Move to location (x, y, z).
+def move_to(x: float, y: float) -> bool:
+    """
+    Commands the robot to move to a specified (x, y) position in world space.
 
     Args:
-        x (float): The x coordinate to move to.
-        y (float): The y coordinate to move to.
-        z (float): The z coordinate to move to.
+        x (float): The x-coordinate of the target position in world space.
+        y (float): The y-coordinate of the target position in world space.
 
     Returns:
-        (bool): True if successfull, False otherwise
+        bool: True if the robot successfully reached the specified position,
+        False otherwise.
     """
     return True
 
 
-# create the app that serves the environment
-app = FastAPI()
-app.include_router(env, prefix="/env")
-
 if __name__ == "__main__":
+    import uvicorn
+    from fastapi import FastAPI
+
+    # create the app that serves the environment
+    app = FastAPI()
+    app.include_router(env, prefix="/env")
+
     uvicorn.run(app, host="127.0.0.1", port=8001, reload=False)

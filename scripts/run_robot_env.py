@@ -1,37 +1,9 @@
-import logging
-import logging.config
-import sys
-
-import uvicorn
-from fastapi import FastAPI
-
 from environment.remote import RemoteEnv
 from robot.actions import RobotActions
 from robot.transform import WorldTransform
+from utils.logging import setup_logging
 
-# Define basic configuration
-logging_config = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "stream": sys.stdout,
-            "formatter": "standard",
-            "level": "INFO",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-}
-
-# Apply the configuration
-logging.config.dictConfig(logging_config)
+setup_logging()
 
 ENV_DESCRIPTION = """## Environment
 The environment is a workspace where a robot arm can move, interact with objects, and perform basic manipulation tasks. The robot arm can precisely navigate to different coordinates within this workspace, allowing it to approach and engage with various objects positioned throughout the area. It can grab a single object, holding it securely until instructed to release it. The robot can only handle one object at a time and does not have the ability to pick up multiple objects simultaneously. Tasks may involve positioning, moving, or sorting objects based on their location or type."""  # noqa: E501
@@ -55,9 +27,13 @@ env.register_const(
     value=(150, -250, 400, 250),
 )
 
-# create the app that serves the environment
-app = FastAPI()
-app.include_router(env, prefix="/env")
 
 if __name__ == "__main__":
+    import uvicorn
+    from fastapi import FastAPI
+
+    # create the app that serves the environment
+    app = FastAPI()
+    app.include_router(env, prefix="/env")
+
     uvicorn.run(app, host="127.0.0.1", port=8001, reload=False)

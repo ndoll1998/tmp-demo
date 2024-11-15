@@ -1,35 +1,12 @@
-import logging
-import sys
-
 from llama_index.agent.openai import OpenAIAgent
 from llama_index.llms.openai import OpenAI
 
 from agent.code_interpreter import CodeInterpreter, Constant, Function
 from agent.service import AgentService
 from environment.client import EnvClient
+from utils.logging import setup_logging
 
-# Define basic configuration
-logging_config = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "standard": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "stream": sys.stdout,
-            "formatter": "standard",
-            "level": "INFO",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-}
-# Apply the configuration
-logging.config.dictConfig(logging_config)
+setup_logging()
 
 
 class PatchedAgentService(AgentService):
@@ -122,9 +99,10 @@ interpreter = CodeInterpreter(constants=constants, functions=functions)
 
 # format the system prompt
 SYSTEM_PROMPT = SYSTEM_PROMPT.format(
-    environment_description=(
-        f"\n\n{env_client.env_description}" if env_client.env_description != "" else ""
-    ),
+    # environment_description=(
+    #     f"\n\n{env_client.env_description}" if env_client.env_description != "" else ""
+    # ),
+    environment_description="",
     function_descriptions=interpreter.get_function_descriptions(),
     constant_descriptions=interpreter.get_constant_descriptions(),
 )
@@ -141,8 +119,17 @@ agent = OpenAIAgent.from_tools(
 if __name__ == "__main__":
     import uvicorn
     from fastapi import FastAPI
+    from fastapi.middleware.cors import CORSMiddleware
 
     app = FastAPI()
     app.include_router(AgentService(agent))
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Origins allowed to access the API
+        allow_credentials=True,  # Allow cookies and credentials
+        allow_methods=["*"],  # Allow all HTTP methods (GET, POST, OPTIONS, etc.)
+        allow_headers=["*"],  # Allow all headers (e.g., Content-Type, Authorization)
+    )
 
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=False, workers=1)

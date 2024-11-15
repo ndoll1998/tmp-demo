@@ -7,13 +7,7 @@ from agent.dto import ChatMessage, MessageRole
 
 
 class AgentCallback:
-    def on_start(self, chat_message: ChatMessage) -> None:
-        ...
-
     def on_step(self, chat_message: ChatMessage) -> None:
-        ...
-
-    def on_completion(self, response: str) -> None:
         ...
 
 
@@ -30,9 +24,6 @@ class NotebookCallback(AgentCallback):
         self.interpreter_tool_name = interpreter_tool_name
         self.msg_format_str = msg_format_str
         self.nb = nbf.v4.new_notebook()
-
-    # def on_start(self, chat_message: ChatMessage) -> None:
-    #     self.on_step(chat_message)
 
     def on_step(self, chat_message: ChatMessage) -> None:
         if chat_message.content is not None and chat_message.role != MessageRole.TOOL:
@@ -57,12 +48,6 @@ class NotebookCallback(AgentCallback):
         elif chat_message.role == MessageRole.TOOL:
             self.add_cell_output(chat_message.content.strip())
 
-    def on_completion(self, response: str) -> None:
-        cell = nbf.v4.new_markdown_cell(
-            self.msg_format_str.format(role=MessageRole.ASSISTANT.value, message=response)
-        )
-        self.add_cells(cell)
-
     def add_cells(self, *cells: nbf.NotebookNode) -> None:
         self.nb["cells"].extend(cells)
         self.write()
@@ -86,9 +71,6 @@ class LoggingCallback(AgentCallback):
     def __init__(self) -> None:
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    # def on_start(self, chat_message: ChatMessage) -> None:
-    #     self.on_step(chat_message)
-
     def on_step(self, chat_message: ChatMessage) -> None:
         if chat_message.content is not None and chat_message.role != MessageRole.TOOL:
             self.logger.info(f"{chat_message.role.value}: {chat_message.content}")
@@ -103,9 +85,6 @@ class LoggingCallback(AgentCallback):
         elif chat_message.role == MessageRole.TOOL:
             tool_name = chat_message.additional_kwargs["name"]
             self.logger.info(f"TOOL[{tool_name}]: {chat_message.content}")
-
-    def on_completion(self, response: str) -> None:
-        self.logger.info(f"Final Response: {response}")
 
 
 def format_to_kwargs(args: str) -> str:
