@@ -1,24 +1,113 @@
+import asyncio
 import logging
-from asyncio import Queue
+from typing import Any
 
-from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.routing import APIRoute, APIRouter, APIWebSocketRoute
+from fastapi.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 from llama_index.core.agent import AgentChatResponse, AgentRunner
-
-from agent.callbacks import AgentCallback
-from agent.dto import ChatMessage
+from llama_index.core.callbacks.base_handler import BaseCallbackHandler
+from llama_index.core.callbacks.schema import CBEventType, EventPayload
+from llama_index.core.llms import ChatMessage, ChatResponse
 
 logger = logging.getLogger(__name__)
 
 
-class AgentService(APIRouter):
-    def __init__(
-        self, agent: AgentRunner, prefix: str = "", callbacks: list[AgentCallback] = []
+class ConnectionManager:
+    def __init__(self) -> None:
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket) -> None:
+        self.active_connections.append(websocket)
+
+    async def disconnect(self, websocket: WebSocket) -> None:
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, data: dict, websocket: WebSocket) -> None:
+        if websocket.application_state == WebSocketState.CONNECTED:
+            await websocket.send_json(data)
+
+    async def broadcast(self, data: dict, exclude: list[WebSocket] | None = None) -> None:
+        exclude = exclude or []
+        exclude = [ws.client for ws in exclude]
+
+        for connection in self.active_connections:
+            if connection.application_state == WebSocketState.CONNECTED:
+                if connection.client not in exclude:
+                    await connection.send_json(data)
+            else:
+                self.disconnect(connection)
+
+
+class QueueCallback(BaseCallbackHandler):
+    """Callback handler for printing llms inputs/outputs."""
+
+    def __init__(self, queue: asyncio.Queue[ChatMessage]) -> None:
+        super().__init__(event_starts_to_ignore=[], event_ends_to_ignore=[])
+        self.queue = queue
+        self.history = []
+
+    def start_trace(self, trace_id: str | None = None) -> None:
+        return None
+
+    def end_trace(
+        self, trace_id: str | None = None, trace_map: dict[str, list[str]] | None = None
     ) -> None:
+        return None
+
+    def on_event_start(
+        self,
+        event_type: CBEventType,
+        payload: dict[str, Any] | None = None,
+        event_id: str = "",
+        parent_id: str = "",
+        **kwargs: Any,
+    ) -> str:
+        if (
+            event_type in [CBEventType.LLM, CBEventType.AGENT_STEP, CBEventType.FUNCTION_CALL]
+            and payload is not None
+        ):
+            self._broadcast_payload(payload)
+
+        return event_id
+
+    def on_event_end(
+        self,
+        event_type: CBEventType,
+        payload: dict[str, Any] | None = None,
+        event_id: str = "",
+        **kwargs: Any,
+    ) -> None:
+        if (
+            event_type in [CBEventType.LLM, CBEventType.AGENT_STEP, CBEventType.FUNCTION_CALL]
+            and payload is not None
+        ):
+            self._broadcast_payload(payload)
+
+        return event_id
+
+    def _broadcast_payload(self, payload: dict) -> None:
+        if EventPayload.MESSAGES in payload:
+            messages: list[ChatMessage] = payload[EventPayload.MESSAGES]
+            response: ChatResponse = payload.get(EventPayload.RESPONSE)
+
+            if response is not None:
+                messages.append(response.message)
+
+            messages = [message for message in messages if message not in self.history]
+
+            self.history.extend(messages)
+            for message in messages:
+                self.queue.put_nowait(message)
+
+
+class AgentService(APIRouter):
+    def __init__(self, agent: AgentRunner, prefix: str = "") -> None:
         self.agent = agent
-        self.callbacks = callbacks
-        self.step_history = Queue()
-        self.step_idx = 0
+        self.agent_lock = asyncio.Lock()
+        self.connection_manager = ConnectionManager()
+        self.ws_queue: asyncio.Queue[ChatMessage] = asyncio.Queue()
+        self.websocket_callback = QueueCallback(self.ws_queue)
+        agent.callback_manager.add_handler(self.websocket_callback)
 
         routes = [
             APIRoute(path="/reset", endpoint=self.reset, methods=["GET"]),
@@ -33,61 +122,38 @@ class AgentService(APIRouter):
 
     async def reset(self) -> None:
         self.agent.reset()
-        self.step_idx = 0
-        await self.empty_step_history()
-
         logger.info("Agent resetted.")
 
     async def chat(self, message: str) -> str:
-        if not self.step_history.empty():
-            raise RuntimeError("Agent is running.")
+        async with self.agent_lock:
+            response = await self.run_task(message=message)
+            await self.websocket_callback.queue.put(None)
 
-        response = await self.run_task(message=message)
         return response.response
 
     async def ws_steps(self, websocket: WebSocket) -> None:
-        await websocket.accept()  # Accept the WebSocket connection
+        await websocket.accept()
+        await self.connection_manager.connect(websocket)
 
         try:
-            while (chat_message := await self.step_history.get()) is not None:
-                # Send each generated message over the WebSocket
-                await websocket.send_text(chat_message.model_dump_json(indent=2))
+            while (chat_message := await self.websocket_callback.queue.get()) is not None:
+                await self.connection_manager.broadcast(chat_message.model_dump())
 
         except WebSocketDisconnect:
             print("WebSocket disconnected")
         except Exception as e:
             print(f"Error in WebSocket communication: {e}")
         finally:
+            await self.connection_manager.disconnect(websocket)
             await websocket.close()
-
-    async def empty_step_history(self) -> None:
-        while not self.step_history.empty():
-            await self.step_history.get()
 
     async def run_task(self, message: str) -> AgentChatResponse:
         task = self.agent.create_task(message)
 
         while not (await self.agent.arun_step(task.task_id)).is_last:
-            await self.gather_new_messages()
+            pass
 
         # now that the step execution is done, we can finalize response
         response: AgentChatResponse = self.agent.finalize_response(task.task_id)
 
-        await self.gather_new_messages()
-        await self.step_history.put(None)
-
         return response
-
-    async def gather_new_messages(self) -> None:
-        chat_messages = await self.agent.memory.chat_store.aget_messages(
-            self.agent.memory.chat_store_key
-        )
-
-        for chat_message in chat_messages[self.step_idx :]:
-            assert isinstance(chat_message, ChatMessage)
-            await self.step_history.put(chat_message)
-
-            for cb in self.callbacks:
-                cb.on_step(chat_message)
-
-        self.step_idx += len(chat_messages[self.step_idx :])
