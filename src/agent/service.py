@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Any
 
+from fastapi.background import BackgroundTasks
 from fastapi.routing import APIRoute, APIRouter, APIWebSocketRoute
 from fastapi.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 from llama_index.core.agent import AgentChatResponse, AgentRunner
@@ -17,10 +18,18 @@ class ConnectionManager:
         self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket) -> None:
+        await websocket.accept()
         self.active_connections.append(websocket)
 
     async def disconnect(self, websocket: WebSocket) -> None:
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+            await websocket.close()
+
+    async def disconnect_all(self) -> None:
+        to_remove = self.active_connections
+        self.active_connections = []
+        await asyncio.gather(*[ws.close() for ws in to_remove])
 
     async def send_personal_message(self, data: dict, websocket: WebSocket) -> None:
         if websocket.application_state == WebSocketState.CONNECTED:
@@ -124,7 +133,8 @@ class AgentService(APIRouter):
         self.agent.reset()
         logger.info("Agent resetted.")
 
-    async def chat(self, message: str) -> str:
+    async def chat(self, message: str, background_tasks: BackgroundTasks) -> str:
+        background_tasks.add_task(self.message_loop)
         async with self.agent_lock:
             response = await self.run_task(message=message)
             await self.websocket_callback.queue.put(None)
@@ -132,12 +142,11 @@ class AgentService(APIRouter):
         return response.response
 
     async def ws_steps(self, websocket: WebSocket) -> None:
-        await websocket.accept()
         await self.connection_manager.connect(websocket)
 
         try:
-            while (chat_message := await self.websocket_callback.queue.get()) is not None:
-                await self.connection_manager.broadcast(chat_message.model_dump())
+            while True:
+                await websocket.receive()
 
         except WebSocketDisconnect:
             print("WebSocket disconnected")
@@ -145,7 +154,6 @@ class AgentService(APIRouter):
             print(f"Error in WebSocket communication: {e}")
         finally:
             await self.connection_manager.disconnect(websocket)
-            await websocket.close()
 
     async def run_task(self, message: str) -> AgentChatResponse:
         task = self.agent.create_task(message)
@@ -157,3 +165,9 @@ class AgentService(APIRouter):
         response: AgentChatResponse = self.agent.finalize_response(task.task_id)
 
         return response
+
+    async def message_loop(self) -> None:
+        while (chat_message := await self.websocket_callback.queue.get()) is not None:
+            await self.connection_manager.broadcast(chat_message.model_dump())
+
+        await self.connection_manager.disconnect_all()
