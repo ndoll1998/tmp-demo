@@ -37,6 +37,9 @@ class ImageActions:
         upper_area_threshold = 1000 * 1000  # Define the max area for a bounding box
         lower_area_threshold = 100 * 100
 
+        min_width = 150
+        min_height = 150
+
         # Filter boxes by score and area
         filtered_boxes = []
 
@@ -51,6 +54,10 @@ class ImageActions:
 
         while len(filtered_boxes) > 0:
             current_box = filtered_boxes.pop(0)
+            x1, y1, x2, y2 = current_box
+
+            if (abs(x2 - x1) < min_width) or (abs(y2 - y1) < min_height):
+                continue
 
             for i in range(len(kept_boxes)):
                 ip = intersection_proportion(current_box, kept_boxes[i])
