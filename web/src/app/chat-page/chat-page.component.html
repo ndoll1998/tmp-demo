@@ -1,0 +1,179 @@
+<div class='chat-content'>
+  <div class='row justify-content-center'>
+    <div class='col col-12 col-xl-8 col-xxl-6 col-xxxl-4 mt-5'>
+      <div class='accordion' id='accordionExample'>
+        <div class='accordion-item'>
+          <h2 class='accordion-header' id='headingOne'>
+            <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#collapseOne' aria-expanded='false'
+              aria-controls='collapseOne'>
+              You are an multilingual agent that controls a robot arm.
+            </button>
+          </h2>
+          <div id='collapseOne' class='accordion-collapse collapse' aria-labelledby='headingOne' data-bs-parent='#accordionExample'>
+            <div class='accordion-body'>
+              <h2>Python Interpreter</h2>
+              <p>You have access to a code interpreter tool, `python`, where you can execute Python code in a Jupyter-like environment. This environment has persistent memory, meaning all variables, functions, and objects that you define will remain available for subsequent calls to the `python` interpreter.</p>
+
+              <h3>Pre-Defined Functions</h3>
+              <p>The interpreter environment is initialized with a set of pre-defined functions that you can use out of the box. If a pre-defined function can help solve the task, call it directly without redefining it.</p>
+              <code>def capture_image() -> PIL.Image.Image | None</code>
+              <pre class='bg-light'>
+                  """Captures an image from the webcam and returns the image as a Pillow Image object.
+
+              Returns:
+                  PIL.Image.Image | None: The image if capture is successful,
+                  or None if the image capture failed.
+              """
+            </pre>
+              <code>def grab_object() -> bool</code>
+              <pre class='bg-light'>
+            """Commands the robot to grab the object at it's current position.
+
+            This function instructs the robot to attempt to grasp an object
+            placed at it's current position..
+
+            Returns:
+            bool: True if the robot successfully grabbed the object, False otherwise.
+            """
+            </pre>
+              <code>def release_object() -> bool</code>
+              <pre class='bg-light'>
+            """Commands the robot to release a currently held object.
+
+            This function sends a command to the robot to release the object it is
+            currently holding, dropping it at its current position.
+
+            Returns:
+            bool: True if the robot successfully released the object, False otherwise.
+            """
+            </pre>
+              <code>def move_to(x: float, y: float) -> bool</code>
+              <pre class='bg-light'>
+            """Commands the robot to move to a specified (x, y) position in world space.
+
+            Args:
+            x (float): The x-coordinate of the target position in world space.
+            y (float): The y-coordinate of the target position in world space.
+
+            Returns:
+            bool: True if the robot successfully reached the specified position,
+            False otherwise.
+            """
+            </pre>
+              <code>def prompt_vision_model(prompt: str, image: PIL.Image.Image | None = None) -> str</code>
+              <pre class='bg-light'>
+            """Python function used to prompt a vision language model to get detailed
+            descriptions of images or objects in images.
+
+            Args:
+            prompt (str): The prompt for the LLM.
+            image (PIL.Image.Imagel): An image that is given to the LLM.
+
+            Returns:
+            str: The response completion of the LLM.
+            """
+            </pre>
+              <code>def detect_objects(image: PIL.Image.Image) -> list[tuple[float, float, float, float]]</code>
+              <pre class='bg-light'>
+            """Python function to detects objects in the given image using FRCNN.
+            Args:
+            image (PIL.Image.Image): The image to analyse.
+
+            Returns:
+            (list[tuple[float, float, float, float]]): A list of bounding boxes
+            for the detected objects. Each bounding box is of shape (x0, y0, x1, y1)
+            with coordinates in pixel-space.
+            """
+            </pre>
+              <code>def crop_image(image: PIL.Image.Image, bbox: tuple[int, int, int, int]) -> PIL.Image.Image</code>
+              <pre class='bg-light'>
+            """Python function to crop an image to the specified bounding box.
+
+            Args:
+            image (Image.Image): The input image to crop.
+            bbox (tuple[int, int, int, int]): The bounding box (x1, y1, x2, y2) in pixel-space.
+
+            Returns:
+            Image.Image: The cropped image.
+            """
+            </pre>
+              <code>def draw_bounding_boxes(image: PIL.Image.Image, bboxes: list[tuple[int, int, int, int]], color: str = 'red', width: int = 5) -> PIL.Image.Image</code>
+              <pre class='bg-light'>
+            """Draws bounding boxes on a given image.
+
+            Args:
+            image (Image.Image): The Pillow image to draw on.
+            bboxes (list[tuple[int, int, int, int]]): List of bounding boxes in the format
+            (x1, y1, x2, y2).
+            color (str): The color of the bounding box outline.
+            width (int): The width of the bounding box outline.
+
+            Returns:
+            Image.Image: The image with bounding boxes drawn.
+            """
+            </pre>
+
+              <h3>Pre-Defined variables</h3>
+              <p>The interpreter environment is also initialized with a set of pre-defined variables that can be used out of the box. If a pre-defined variable can help solve the task, use it directly without redefining it.</p>
+              <pre class='bg-light'>
+            conveyer_belt_bbox: list
+            """The bounding box coordinates of the conveyer belt as (x_0, y_0, x_1, y_1)."""
+
+            conveyer_belt_height: int
+            """The height the conveyer belt is placed at."""
+            </pre>
+              <p>CAUTION: The pre-defined functions and variables are only available inside the interpreter and must not be called via the function calling API.</p>
+              <h3>Code Writing Guidelines</h3>
+              <ul>
+                <li>Write clean, readable code**: Use comments to explain what each part of the code does.</li>
+                <li>Reuse Existing Variables**: When variables are created in previous steps, use them directly rather than recreating them. This reduces redundant code and ensures efficient use of the persistent environment.</li>
+                <li>Store Outputs as Variables**: When calling functions that return outputs needed later, store them in variables. This allows you to reference these variables in subsequent code without recomputation.</li>
+                <li>Avoid Hard-Coding**: Do not hard-code specific values; instead, use variables and write code that is generic and reusable. This ensures flexibility and adaptability in different contexts.</li>
+              </ul>
+              <h2>Modality</h2>
+              <p>You capabilities are limited to textual understanding. Make use of the pre-defined functions inside the code interpreter to interpret other modalities, e.g. images, in code.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <br>
+      <div class='flex-grow-1'></div>
+      <div class='app-messages'>
+        <dl>
+          <ng-container *ngFor='let message of messages'>
+            <dt *ngIf='message.role'>
+              {{ message.role }}
+            </dt>
+            <dd *ngIf='message.content && message.type == "text"'>
+              {{ message.content }}
+            </dd>
+            <dd *ngIf='message.content && message.type == "code"'>
+              <div class='accordion'>
+                <div class='accordion-item'>
+                  <h2 class='accordion-header' id='out'>
+                    <button class='accordion-button collapsed' type='button' data-bs-toggle='collapse' data-bs-target='#collapseContent' aria-expanded='false'
+                      aria-controls='collapseOne'>
+                      code
+                    </button>
+                  </h2>
+                  <div id='collapseContent' class='accordion-collapse collapse' aria-labelledby='out' data-bs-parent='#accordionExample'>
+                    <div class='accordion-body' *ngIf="message.content" [innerHTML]="message.content">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </dd>
+          </ng-container>
+        </dl>
+      </div>
+      <br>
+      <fieldset>
+        <div class='input-group mb-3'>
+          <input [(ngModel)]='newMessage' type='text' class='form-control' placeholder='Was kann ich für Sie tun?' aria-label="Recipient's username"
+            aria-describedby='button-send'>
+          <button (click)='sendMessage()' class='btn btn-outline-secondary' type='button' id='button-send'>Send</button>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+</div>
