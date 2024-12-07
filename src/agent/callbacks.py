@@ -91,12 +91,13 @@ def format_to_kwargs(args: str) -> str:
     d = json.loads(args)
 
     formatted_kwargs = []
+    backslash_char = "\\"
 
     for key, value in d.items():
         # Check if the value is a multiline string
         if isinstance(value, str) and "\n" in value:
             # Format multiline strings with triple backticks and further indentation
-            formatted_value = f"```\n        {value.replace('\n', '\n        ')}\n    ```"
+            formatted_value = f"```{backslash_char}n        {value.replace('{backslash_char}n', '{backslash_char}n        ')}{backslash_char}n    ```"
         else:
             # Use repr for single-line values and add normal indentation
             formatted_value = repr(value)
