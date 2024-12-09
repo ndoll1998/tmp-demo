@@ -4,7 +4,7 @@ from io import BytesIO
 from PIL import Image
 
 
-def pil_image_to_base64(image: Image.Image) -> str:
+def pil_image_to_bytes(image: Image.Image) -> bytes:
     # Convert image to RGB if it has an alpha channel (RGBA)
     if image.mode == "RGBA":
         image = image.convert("RGB")
@@ -14,7 +14,11 @@ def pil_image_to_base64(image: Image.Image) -> str:
     # Save the image to the buffer in a specific format (e.g., JPEG)
     image.save(buffer, format="JPEG")
     # Get the binary data from the buffer
-    image_bytes = buffer.getvalue()
+    return buffer.getvalue()
+
+
+def pil_image_to_base64(image: Image.Image) -> str:
+    image_bytes = pil_image_to_bytes(image)
     # Encode the binary data to a base64 string
     base64_string = base64.b64encode(image_bytes).decode("utf-8")
     return base64_string

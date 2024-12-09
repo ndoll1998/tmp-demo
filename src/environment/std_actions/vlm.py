@@ -1,11 +1,11 @@
-from llama_index.core.schema import ImageDocument
-from llama_index.multi_modal_llms.openai import OpenAIMultiModal
+from llama_index.core.llms import ChatMessage, ImageBlock, MessageRole, TextBlock
+from llama_index.llms.openai import OpenAI
 from PIL import Image
 
-from environment.utils import pil_image_to_base64
+from environment.utils import pil_image_to_bytes
 
 
-class VisionLanguageModelAction(OpenAIMultiModal):
+class VisionLanguageModelAction(OpenAI):
     def prompt_vision_model(self, prompt: str, image: Image.Image | None = None) -> str:
         """Python function used to prompt a vision language model to get detailed
         descriptions of images or objects in images.
@@ -18,13 +18,17 @@ class VisionLanguageModelAction(OpenAIMultiModal):
             str: The response completion of the LLM.
         """
         # If an image is provided, process with both image and text
-        if image is not None:
-            image_doc = ImageDocument(image=pil_image_to_base64(image))
-            # Use LLMImageResponse to send both the prompt and image
-            response = self.complete(prompt=prompt, image_documents=[image_doc])
-        else:
-            # Only send the text prompt
-            response = self.complete(prompt=prompt)
+        msg = ChatMessage(
+            role=MessageRole.USER,
+            blocks=[
+                TextBlock(text=prompt),
+            ],
+        )
 
+        if image is not None:
+            msg.blocks.append(ImageBlock(image=pil_image_to_bytes(image)))
+
+        # Use LLMImageResponse to send both the prompt and image
+        response = self.chat(messages=[msg])
         # Retrieve the LLM's response text
-        return response.text
+        return response.message.content
