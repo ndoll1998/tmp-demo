@@ -9,7 +9,7 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "pydantic",
-    "llama-index",
+    "llama-index==0.12.4",
     "openai",
     "ipython",
     "nbformat",
