@@ -18,7 +18,7 @@ async def connect_and_receive_messages(
 ) -> T:
     client = httpx.AsyncClient(base_url=f"http://{host}:{port}", timeout=None)
 
-    async with websockets.connect(f"ws://{host}:{port}/ws/steps") as websocket:
+    async with websockets.connect(f"ws://{host}:{port}/ws/messages") as websocket:
         if message is not None:
             coro = client.post("/chat", params={"message": message})
             task = asyncio.create_task(coro)

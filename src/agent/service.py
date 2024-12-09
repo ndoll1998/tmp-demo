@@ -50,13 +50,15 @@ class ConnectionManager:
                 self.disconnect(connection)
 
 
-class QueueCallback(BaseCallbackHandler):
-    """Callback handler for printing llms inputs/outputs."""
+class MessageQueueCallbackHandler(BaseCallbackHandler):
+    """A llama-index callback handler that puts all chat messages
+    in an asyncio queue.
+    """
 
     def __init__(self, queue: asyncio.Queue[ChatMessage]) -> None:
         super().__init__(event_starts_to_ignore=[], event_ends_to_ignore=[])
         self.queue = queue
-        self.history = []
+        self._history = []
 
     def start_trace(self, trace_id: str | None = None) -> None:
         return None
@@ -78,7 +80,7 @@ class QueueCallback(BaseCallbackHandler):
             event_type in [CBEventType.LLM, CBEventType.AGENT_STEP, CBEventType.FUNCTION_CALL]
             and payload is not None
         ):
-            self._broadcast_payload(payload)
+            self.process_payload(payload)
 
         return event_id
 
@@ -93,11 +95,11 @@ class QueueCallback(BaseCallbackHandler):
             event_type in [CBEventType.LLM, CBEventType.AGENT_STEP, CBEventType.FUNCTION_CALL]
             and payload is not None
         ):
-            self._broadcast_payload(payload)
+            self.process_payload(payload)
 
         return event_id
 
-    def _broadcast_payload(self, payload: dict) -> None:
+    def process_payload(self, payload: dict) -> None:
         if EventPayload.MESSAGES in payload:
             messages: list[ChatMessage] = payload[EventPayload.MESSAGES]
             response: ChatResponse = payload.get(EventPayload.RESPONSE)
@@ -105,9 +107,9 @@ class QueueCallback(BaseCallbackHandler):
             if response is not None:
                 messages.append(response.message)
 
-            messages = [message for message in messages if message not in self.history]
+            messages = [message for message in messages if message not in self._history]
 
-            self.history.extend(messages)
+            self._history.extend(messages)
             for message in messages:
                 self.queue.put_nowait(message)
 
@@ -117,14 +119,14 @@ class AgentService(APIRouter):
         self.agent = agent
         self.agent_lock = asyncio.Lock()
         self.connection_manager = ConnectionManager()
-        self.ws_queue: asyncio.Queue[ChatMessage] = asyncio.Queue()
-        self.websocket_callback = QueueCallback(self.ws_queue)
-        agent.callback_manager.add_handler(self.websocket_callback)
+        self.message_queue: asyncio.Queue[ChatMessage] = asyncio.Queue()
+        self.callback_handler = MessageQueueCallbackHandler(self.message_queue)
+        agent.callback_manager.add_handler(self.callback_handler)
 
         routes = [
             APIRoute(path="/reset", endpoint=self.reset, methods=["GET"]),
             APIRoute(path="/chat", endpoint=self.chat, methods=["POST"]),
-            APIWebSocketRoute(path="/ws/steps", endpoint=self.ws_steps),
+            APIWebSocketRoute(path="/ws/messages", endpoint=self.ws_messages),
         ]
 
         super().__init__(
@@ -137,15 +139,17 @@ class AgentService(APIRouter):
         logger.info("Agent resetted.")
 
     async def chat(self, message: str) -> str:
-        message_loop_task = asyncio.create_task(self.message_loop())
+        message_loop_task = asyncio.create_task(self.broadcast_messages())
         async with self.agent_lock:
+            # run the agent
             response = await self.run_task(message=message)
-            await self.websocket_callback.queue.put(None)
+            # this stops message broadcasting
+            await self.message_queue.put(None)
 
         await message_loop_task
         return response.response
 
-    async def ws_steps(self, websocket: WebSocket) -> None:
+    async def ws_messages(self, websocket: WebSocket) -> None:
         await self.connection_manager.connect(websocket)
 
         try:
@@ -161,17 +165,13 @@ class AgentService(APIRouter):
 
     async def run_task(self, message: str) -> AgentChatResponse:
         task = self.agent.create_task(message)
-
         while not (await self.agent.arun_step(task.task_id)).is_last:
             pass
-
         # now that the step execution is done, we can finalize response
-        response: AgentChatResponse = self.agent.finalize_response(task.task_id)
+        return self.agent.finalize_response(task.task_id)
 
-        return response
-
-    async def message_loop(self) -> None:
-        while (chat_message := await self.ws_queue.get()) is not None:
+    async def broadcast_messages(self) -> None:
+        while (chat_message := await self.message_queue.get()) is not None:
             await self.connection_manager.broadcast(chat_message.model_dump())
 
         await self.connection_manager.disconnect_all()

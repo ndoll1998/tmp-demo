@@ -1,7 +1,10 @@
+import base64
+import os
 from logging import getLogger
 
-from llama_index.agent.openai import OpenAIAgent
-from llama_index.llms.openai import OpenAI
+from llama_index.core.agent import ReActAgent
+from llama_index.core.prompts import PromptTemplate
+from llama_index.llms.openai_like import OpenAILike
 
 from agent.code_interpreter import CodeInterpreter, Constant, Function
 from agent.service import AgentService
@@ -112,13 +115,46 @@ SYSTEM_PROMPT = SYSTEM_PROMPT.format(
     constant_descriptions=interpreter.get_constant_descriptions(),
 )
 
-# Create the Agent with load/search tools
-agent = OpenAIAgent.from_tools(
-    llm=OpenAI(model="gpt-4o"),
+# # OpenAI
+# from llama_index.llms.openai import OpenAI
+# from llama_index.agent.openai import OpenAIAgent
+
+# agent = OpenAIAgent.from_tools(
+#     llm=OpenAI(model="gpt-4o"),
+#     tools=[interpreter.to_tool()],
+#     system_prompt=SYSTEM_PROMPT,
+#     max_function_calls=50
+#     # verbose=True,
+# )
+
+
+# GenAI Platform
+
+username = os.environ["GENAI_USERNAME"]
+password = os.environ["GENAI_PASSWORD"]
+token_string = f"{username}:{password}"
+token_bytes = base64.b64encode(token_string.encode())
+
+llm = OpenAILike(
+    model="Llama-3.1-70B-Instruct",
+    is_chat_model=True,
+    api_key="xxxx",
+    api_base="https://genai.iais.fraunhofer.de/api/v2",
+    default_headers={"Authorization": f"Basic {token_bytes.decode()}"},
+)
+print("DEFAULT_HEADERS", llm.default_headers)
+agent = ReActAgent.from_tools(
+    llm=llm,
     tools=[interpreter.to_tool()],
-    system_prompt=SYSTEM_PROMPT,
-    max_function_calls=50
     # verbose=True,
+)
+react_system_prompt = agent.get_prompts()["agent_worker:system_prompt"]
+agent.update_prompts(
+    {
+        "agent_worker:system_prompt": PromptTemplate(
+            react_system_prompt.template + "\n" + SYSTEM_PROMPT
+        )
+    }
 )
 
 

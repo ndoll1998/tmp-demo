@@ -105,7 +105,10 @@ class CodeInterpreter:
 
         self.history.append(CodeCell(input=code, output=output))
 
-        return str(output)
+        output_str = str(output)
+        logger.info("Output: " + str(output_str) + "\n------------")
+
+        return output_str
 
     def create_shell(self) -> TerminalInteractiveShell:
         shell = TerminalInteractiveShell.instance()

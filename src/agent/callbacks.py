@@ -2,6 +2,11 @@ import json
 import logging
 
 import nbformat as nbf
+from llama_index.core.agent.react.output_parser import (
+    extract_final_response,
+    parse_action_reasoning_step,
+)
+from llama_index.core.agent.react.types import ResponseReasoningStep
 
 from agent.dto import ChatMessage, MessageRole
 
@@ -26,7 +31,10 @@ class NotebookCallback(AgentCallback):
         self.nb = nbf.v4.new_notebook()
 
     def on_step(self, chat_message: ChatMessage) -> None:
-        if chat_message.content is not None and chat_message.role != MessageRole.TOOL:
+        if chat_message.content is not None and chat_message.role in [
+            MessageRole.USER,
+            MessageRole.SYSTEM,
+        ]:
             cell = nbf.v4.new_markdown_cell(
                 self.msg_format_str.format(
                     role=chat_message.role.value, message=chat_message.content
@@ -44,6 +52,41 @@ class NotebookCallback(AgentCallback):
                     else:
                         pass
                         # raise NotImplementedError()
+            elif "Thought:" not in chat_message.content:
+                rss = ResponseReasoningStep(
+                    thought="(Implicit) I can answer without any more tools!",
+                    response=chat_message.content,
+                )
+                cell = nbf.v4.new_markdown_cell(
+                    self.msg_format_str.format(
+                        role=chat_message.role.value, message=rss.get_content()
+                    )
+                )
+                self.add_cells(cell)
+
+            elif "Action:" in chat_message.content:
+                chat_message.content.find("Action")
+                ars = parse_action_reasoning_step(chat_message.content)
+                cell = nbf.v4.new_code_cell(ars.action_input[self.interpreter_argument_name])
+                self.add_cells(cell)
+
+            elif "Answer:" in chat_message.content:
+                thought, answer = extract_final_response(chat_message.content)
+                rss = ResponseReasoningStep(thought=thought, response=answer)
+                cell = nbf.v4.new_markdown_cell(
+                    self.msg_format_str.format(
+                        role=chat_message.role.value, message=rss.get_content()
+                    )
+                )
+                self.add_cells(cell)
+
+            else:
+                cell = nbf.v4.new_markdown_cell(
+                    self.msg_format_str.format(
+                        role=chat_message.role.value, message=chat_message.content
+                    )
+                )
+                self.add_cells(cell)
 
         elif chat_message.role == MessageRole.TOOL:
             self.add_cell_output(chat_message.content.strip())
