@@ -1,43 +1,41 @@
 services:
-  #stt:
-  #  image: "stt-azure-speech:latest"
-  #  build:
-  #    context: "../stt-azure-speech"
-  #  network_mode: host
-  #  environment:
-  #    - NODE_ENV=production
+  stt:
+   image: "hub.cc-asp.fraunhofer.de/iais.kd.nlu.robotdemo/stt-azure-speech:latest"
+   network_mode: host
+   environment:
+     - NODE_ENV=production
 
-  std_env:
-    image: "robotdemo:latest"
-    build:
-      context: "."
-    network_mode: host
-    environment:
-      - PYTHONUNBUFFERED=1
-      - OPENAI_API_KEY
-    command: "python scripts/run_std_env.py"
+  # std_env:
+  #   image: "robotdemo:latest"
+  #   build:
+  #     context: "."
+  #   network_mode: host
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - OPENAI_API_KEY
+  #   command: "python scripts/run_std_env.py"
 
-  env:
-    image: "robotdemo:latest"
-    build:
-      context: "."
-    network_mode: host
-    volumes:
-      - ./data:/app/data
-    environment:
-      - PYTHONUNBUFFERED=1
-      - OPENAI_API_KEY
-    command: "python scripts/run_robot_env.py"
+  # env:
+  #   image: "robotdemo:latest"
+  #   build:
+  #     context: "."
+  #   network_mode: host
+  #   volumes:
+  #     - ./data:/app/data
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - OPENAI_API_KEY
+  #   command: "python scripts/run_robot_env.py"
 
-  agent:
-    image: "robotdemo:latest"
-    build:
-      context: "."
-    network_mode: host
-    depends_on:
-      - env
-      - std_env
-    environment:
-      - PYTHONUNBUFFERED=1
-      - OPENAI_API_KEY
-    command: "python scripts/run_agent.py"
+  # agent:
+  #   image: "robotdemo:latest"
+  #   build:
+  #     context: "."
+  #   network_mode: host
+  #   depends_on:
+  #     - env
+  #     - std_env
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #     - OPENAI_API_KEY
+  #   command: "python scripts/run_agent.py"
