@@ -58,6 +58,9 @@ class QueueCallback(BaseCallbackHandler):
         self.queue = queue
         self.history = []
 
+    def reset(self) -> None:
+        self.history = []
+
     def start_trace(self, trace_id: str | None = None) -> None:
         return None
 
@@ -118,8 +121,8 @@ class AgentService(APIRouter):
         self.agent_lock = asyncio.Lock()
         self.connection_manager = ConnectionManager()
         self.ws_queue: asyncio.Queue[ChatMessage] = asyncio.Queue()
-        self.websocket_callback = QueueCallback(self.ws_queue)
-        agent.callback_manager.add_handler(self.websocket_callback)
+        self.queue_callback = QueueCallback(self.ws_queue)
+        agent.callback_manager.add_handler(self.queue_callback)
 
         routes = [
             APIRoute(path="/reset", endpoint=self.reset, methods=["GET"]),
@@ -134,13 +137,14 @@ class AgentService(APIRouter):
 
     async def reset(self) -> None:
         self.agent.reset()
+        self.queue_callback.reset()
         logger.info("Agent resetted.")
 
     async def chat(self, message: str) -> str:
         message_loop_task = asyncio.create_task(self.message_loop())
         async with self.agent_lock:
             response = await self.run_task(message=message)
-            await self.websocket_callback.queue.put(None)
+            await self.queue_callback.queue.put(None)
 
         await message_loop_task
         return response.response
